@@ -1353,11 +1353,11 @@
                     $par.append('<a href="' + scalarapi.model.urlPrefix + currentNode.slug + '.meta" title="View metadata for this page">Metadata</a><br />');
                 }
                 $par.append('<a href="http://scalar.usc.edu/scalar"><img src="' + page.options.root_url + '/images/scalar_logo_small.png" width="18" height="16"/></a>');
-                $par.append(' Powered by <a href="http://scalar.usc.edu/scalar">Scalar</a> (<a href="https://github.com/anvc/scalar">' + $('link#scalar_version').attr('href').trim() + '</a>) | ');
-                $par.append('<a href="http://scalar.usc.edu/terms-of-service/">Terms of Service</a> | ');
+                $par.append(' Powered by <a href="http://scalar.usc.edu/scalar">Scalar</a>');
+/*              $par.append('<a href="http://scalar.usc.edu/terms-of-service/">Terms of Service</a> | ');
                 $par.append('<a href="http://scalar.usc.edu/privacy-policy/">Privacy Policy</a> | ');
                 $par.append('<a href="http://scalar.usc.edu/contact/">Scalar Feedback</a>');
-            },
+*/            },
 
             addVersionInfo: function() {
                 if (page.is_author || page.is_commentator || page.is_reviewer) {
