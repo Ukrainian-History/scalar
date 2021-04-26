@@ -1523,7 +1523,7 @@
                         }
 
                     }
-                    publisherInfo.append(' ' + (publisherNode.title ? publisherNode.title : ''));
+                    publisherInfo.append(' <div>' + (publisherNode.title ? publisherNode.title : '') + '</div>');
                 }
                 $('#colophon').before(publisherInfo);
 
@@ -1536,7 +1536,6 @@
                 link.css('display', 'none');
                 return link;
             },
-
             makeRelativeImagesAbsolute: function() {
                 var absoluteURLRoot = scalarapi.stripEdition($('link#parent').attr('href'));
                 page.bodyContentImages().each(function() {

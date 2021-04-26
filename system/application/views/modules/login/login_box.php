@@ -59,11 +59,13 @@ $this->template->add_js('system/application/views/arbors/admin/jquery-3.4.1.min.
 			</tr>
 		</table>
 	</form>
+<!--
 	<div class="login_footer">
 		<a href="<?=base_url()?>">Return to index</a> |
 		<a href="http://scalar.usc.edu/terms-of-service/" target="_blank">Terms of Service</a> |
 		<a href="register">Register an account</a>
 	</div>
+-->
 </div>
 <br clear="both" />
 </div>
