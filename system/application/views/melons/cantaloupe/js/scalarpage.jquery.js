@@ -1530,7 +1530,9 @@
                         var link = $('<a href="' + node.current.sourceFile + '" data-annotations="[]" data-align="center" resource="' + node.slug + '" class="inline"></a>').hide().appendTo(parent);
                         page.addNoteOrAnnotationMedia(link, parent, width, height);
                     }
-                    noteViewer.append('<a class="noteLink" href="' + scalarapi.model.urlPrefix + node.slug + '">Go to note</a>');
+                    if (!noteViewer.data('show-content')) {
+                        noteViewer.append('<a class="noteLink" href="' + scalarapi.model.urlPrefix + node.slug + '">Read more...</a>');
+		    }
                 }
             },
 
