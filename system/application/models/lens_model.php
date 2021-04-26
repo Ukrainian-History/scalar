@@ -24,15 +24,6 @@
  * @version             1.0
  */
 
-function lens_timestamp_cmp_asc($a, $b) {
-	if ($a->timestamp == $b->timestamp) return 0;
-	return ($a->timestamp < $b->timestamp) ? -1 : 1;
-}
-function lens_timestamp_cmp_desc($a, $b) {
-	if ($a->timestamp == $b->timestamp) return 0;
-	return ($a->timestamp < $b->timestamp) ? 1 : -1;
-}
-
 class Lens_model extends MY_Model {
 
 	private $urn_template = 'urn:scalar:lens:$1';
@@ -116,6 +107,18 @@ class Lens_model extends MY_Model {
 		
 	}
 	
+	public function set_submitted_to($version_id, $bool=false, $comment='') {
+		
+		$contents = $this->get_children($version_id);
+		if (empty($contents)) throw new Exception('Could not find Lens for the version');
+		$contents = json_decode($contents, true);
+		$contents['submitted'] = true;
+		$contents['submitted_comment'] = $comment;
+		$this->save_children($version_id, array($contents));
+		return true;
+		
+	}
+	
 	public function get_nodes_from_json($book_id=0, $json='', $prefix='') {
 		
 		$CI =& get_instance();
@@ -123,7 +126,9 @@ class Lens_model extends MY_Model {
 		if (!isset($CI->versions) || 'object'!=gettype($CI->versions)) $CI->load->model('version_model','versions');
 		if (empty($book_id)) throw new Exception("Invalud Book ID");
 		$how_to_combine = $this->get_operation_from_visualization($json['visualization']);
-		$pages_load_metadata = (isset($json['visualization']['type']) && $json['visualization']['type'] == 'map') ? true : false;
+		$pages_load_metadata = false;
+		if (isset($json['visualization']['type']) && $json['visualization']['type'] == 'map') $pages_load_metadata = true;
+		if (isset($json['visualization']['type']) && $json['visualization']['type'] == 'list') $pages_load_metadata = true;
 		$contents = array();
 		
 		if (isset($json['frozen']) && $json['frozen']) {
@@ -144,16 +149,25 @@ class Lens_model extends MY_Model {
 									$has_used_filter = true;
 									$field = trim($modifier['metadata-field']);
 									$value = trim($modifier['content']);
-									$operator = (isset($modifier['operator']) && 'exclusive'==$modifier['operator']) ? 'exclusive' : 'inclusive';
+									$operators = array('exclusive', 'inclusive', 'exact-match');
+									$operator = (isset($modifier['operator']) && in_array($modifier['operator'], $operators)) ? $modifier['operator'] : $operators[0];
 									switch ($operator) {
 										case 'exclusive':
 											$content = (!empty($content)) ? $content : $this->get_pages_from_content_selector($component['content-selector'], $book_id);
-											$to_subtract = $CI->versions->get_by_predicate($book_id, $field, false, null, $value);
+											$to_subtract = $CI->versions->get_by_predicate($book_id, $field, false, null, $value, false);
 											$content = $this->subtract_content($content, $to_subtract);
 											$content = $this->do_versions($content, $pages_load_metadata);
 											break;
 										case 'inclusive':
-											$content_with_predicate = $CI->versions->get_by_predicate($book_id, $field, false, null, $value);
+											$content_with_predicate = $CI->versions->get_by_predicate($book_id, $field, false, null, $value, false);
+											if (!empty($content)) {
+												$content = $this->combine_items($content, $content_with_predicate, 'and');
+											} else {
+												$content = $this->filter_by_content_selector($content_with_predicate, $component);
+											}
+											break;
+										case 'exact-match':
+											$content_with_predicate = $CI->versions->get_by_predicate($book_id, $field, false, null, $value, true);
 											if (!empty($content)) {
 												$content = $this->combine_items($content, $content_with_predicate, 'and');
 											} else {
@@ -165,14 +179,15 @@ class Lens_model extends MY_Model {
 								case "distance":
 									$has_used_filter = true;
 									$from_arr = $this->get_pages_from_content_selector($component['content-selector'], $book_id);
-									$distance_in_meters = $modifier['quantity'];
+									$distance = $modifier['quantity'];
+									$units = $modifier['units'];
 									$items = $CI->versions->get_by_predicate($book_id, array('dcterms:spatial','dcterms:coverage'));
 									foreach ($from_arr as $from) {
 										$content = array();
 										$item = $this->filter_by_slug($items, $from->slug);
 										if (!empty($item)) {
 											$latlng = $this->get_latlng_from_item($item[0]);
-											$content = $this->filter_by_location($items, $latlng, $distance_in_meters);
+											$content = $this->filter_by_location($items, $latlng, $distance, $units);
 										}
 									}
 									break;
@@ -223,6 +238,7 @@ class Lens_model extends MY_Model {
 									$has_used_filter = true;
 									$operator = (isset($modifier['operator']) && 'exclusive'==$modifier['operator']) ? 'exclusive' : 'inclusive';
 									$types = (isset($modifier['content-types'])) ? $modifier['content-types'] : array();
+									if (!is_array($types)) $types = array($types);
 									if (isset($modifier['content-type'])) $types[] = $modifier['content-type'];
 									switch ($operator) {
 										case 'exclusive':
@@ -275,6 +291,9 @@ class Lens_model extends MY_Model {
 									}
 								}
 								break;
+							case "content-types":
+								// TODO: is this needed? content-types are filtered above
+								break;
 						}
 					}
 				}
@@ -282,34 +301,76 @@ class Lens_model extends MY_Model {
 		}
 		
 		// Sorts
+		$sort_by_creation_date = false;
 		if (isset($json['sorts'])) {
 			foreach ($json['sorts'] as $sort) {
 				switch ($sort['sort-type']) {
-					case "match-count":
-						
-						break;
 					case "alphabetical":
 						$field = $sort['metadata-field'];
 						$direction = ('descending' == $sort['sort-order']) ? 'desc' : 'asc';
 						$contents = $this->sort_by_predicate($contents, $field, $direction);
 						break;
+					case "creation-date":
+						$sort_by_creation_date = true;
+						$direction = ('descending' == $sort['sort-order']) ? 'desc' : 'asc';
+						$contents = $this->sort_by_predicate($contents, 'dcterms:created', $direction, true);
+						break;
+					case "edit-date":
+						$direction = ('descending' == $sort['sort-order']) ? 'desc' : 'asc';
+						$contents = $this->sort_by_predicate($contents, 'dcterms:created', $direction);
+						break;
 					case "distance":
-						
+						$direction = ('descending' == $sort['sort-order']) ? 'desc' : 'asc';
+						$arr = explode(',',$sort['content']);
+						$loc_lat = trim($arr[0]);
+						$loc_lng = trim($arr[1]);
+						for ($j = 0; $j < count($contents); $j++) {
+							$contents[$j]->distance = 0;
+							$latlng = $this->get_latlng_from_item($contents[$j]);
+							if (empty($latlng)) continue;
+							$arr = explode(',',$latlng);
+							$dest_lat = trim($arr[0]);
+							$dest_lng = trim($arr[1]);
+							$dest_distance_in_meters = latlng_distance($loc_lat, $loc_lng, $dest_lat, $dest_lng);
+							$contents[$j]->distance = $dest_distance_in_meters;
+						}
+						usort($contents, "lens_distance_cmp_".$direction);
+						break;
+					case "type":
+						$direction = (isset($sort['sort-order']) && 'descending' == $sort['sort-order']) ? 'desc' : 'asc';
+						for ($j = 0; $j < count($contents); $j++) {
+							$contents[$j]->relation_type = $this->get_relation_type($contents[$j]);
+						}
+						usort($contents, "lens_relation_type_cmp_".$direction);
+						break;
+						break;
+					case "relationship-count":
+						$direction = ('descending' == $sort['sort-order']) ? 'desc' : 'asc';
+						for ($j = 0; $j < count($contents); $j++) {
+							$contents[$j]->num_relations = $this->get_num_relations($contents[$j]);
+						}
+						usort($contents, "lens_relationship_count_cmp_".$direction);
+						break;
+					case "match-count":
+						$direction = ('descending' == $sort['sort-order']) ? 'desc' : 'asc';
+						$field = $sort['metadata-field'];
+						$match = $sort['content'];
+						for ($j = 0; $j < count($contents); $j++) {
+							$contents[$j]->string_matches = $this->get_num_string_matches($contents[$j], $field, $match);
+						}
+						usort($contents, "lens_string_matches_cmp_".$direction);
 						break;
 					case "visit-date":
 						$direction = ('descending' == $sort['sort-order']) ? 'desc' : 'asc';
 						for ($j = 0; $j < count($contents); $j++) {
 							$content_id = $contents[$j]->content_id;
 							if (isset($json['history']) && isset($json['history'][$content_id])) {
-								$contents[$j]->timestamp = $json['history'][$content_id];
+								$contents[$j]->visit_date = (int) $json['history'][$content_id];
 							} else {
-								$contents[$j]->timestamp = 0;
+								$contents[$j]->visit_date = 0;
 							}
 						}
-						usort($contents, "lens_timestamp_cmp_".$direction);
-						break;
-					case "type":
-						
+						usort($contents, "lens_visit_date_cmp_".$direction);
 						break;
 				}
 			}
@@ -324,6 +385,12 @@ class Lens_model extends MY_Model {
 			$page->versions[0]->version_of = $uri;
 			$return[$uri] = $CI->pages->rdf($page);
 			$return[$version_uri] = $CI->versions->rdf($page->versions[0]);
+			// Sort-specific fields
+			if (isset($page->relation_type)) $return[$uri]['relation_type'] = $page->relation_type;
+			if (isset($page->num_relations)) $return[$uri]['num_relations'] = $page->num_relations;
+			if (isset($page->string_matches)) $return[$uri]['string_matches'] = $page->string_matches;
+			if (isset($page->visit_date)) $return[$uri]['visit_date'] = $page->visit_date;
+			if ($sort_by_creation_date) $return[$uri]['created'] = $page->created;
 		}
 		
 		$return = $this->rdf_ns_to_uri($return);
@@ -407,13 +474,15 @@ class Lens_model extends MY_Model {
     	
     }
     
-    public function filter_by_location($items, $location, $distance_in_meters) {
+    public function filter_by_location($items, $location, $distance, $units) {
     	
     	$arr = explode(',',$location);
     	$loc_lat = trim($arr[0]);
     	$loc_lng = trim($arr[1]);
     	$return = array();
     	
+    	$distance_in_meters = $this->get_distance_in_meters($distance, $units);
+
     	foreach ($items as $item) {
     		$latlng = $this->get_latlng_from_item($item);
     		if (empty($latlng)) continue;
@@ -426,6 +495,105 @@ class Lens_model extends MY_Model {
     	}
     	
     	return $return;
+    	
+    }
+    
+    public function get_num_relations($item, $book_id=0) {
+    	
+    	$CI =& get_instance();
+    	$num = 0;
+    	
+    	// get parent version ID
+    	$version = $this->versions->get_single($item->content_id, null, '', false);
+    	$version_id = $version->version_id;
+    	
+    	// get references
+    	$types = $CI->config->item('ref');
+    	foreach ($types as $type_p) {
+    		$type = rtrim($type_p, "s");
+    		if (!isset($CI->$type_p) || 'object'!=gettype($CI->$type_p)) $CI->load->model($type.'_model',$type_p);
+    		$items = $CI->$type_p->get_children($version_id, '', '', true, null);
+			$num = $num + count($items);
+			$items = $CI->$type_p->get_parents($version_id, '', '', true, null);
+			$num = $num + count($items);
+   		}
+   		
+    	// get parents
+    	$types = $CI->config->item('rel');
+    	foreach ($types as $type_p) {
+    		$type = rtrim($type_p, "s");
+    		if ($type == 'replie') $type = 'reply';
+    		if (!isset($CI->$type_p) || 'object'!=gettype($CI->$type_p)) $CI->load->model($type.'_model',$type_p);
+    		$items = $CI->$type_p->get_parents($version_id, '', '', true, null);
+    		$num = $num + count($items);
+    	}
+    	
+    	// get children
+    	$types = $CI->config->item('rel');
+    	foreach ($types as $type_p) {
+    		$type = rtrim($type_p, "s");
+    		if ($type == 'replie') $type = 'reply';
+    		if (!isset($CI->$type_p) || 'object'!=gettype($CI->$type_p)) $CI->load->model($type.'_model',$type_p);
+    		$items = $CI->$type_p->get_children($version_id, '', '', true, null);
+    		$num = $num + count($items);
+    	}
+    	
+    	return $num;
+    	
+    }
+    
+    public function get_relation_type($item) {
+    	
+    	$CI =& get_instance();
+		$the_type = 'page';
+		if ($item->type == 'media') $the_type= 'media';
+    	
+    	// get parent version ID
+    	$version = $this->versions->get_single($item->content_id, null, '', false);
+    	$version_id = $version->version_id;
+    	
+    	// Get types
+    	$types = array('tags', 'annotations', 'replies');
+    	foreach ($types as $type_p) {
+    		$type = rtrim($type_p, "s");
+    		if ($type == 'replie') $type = 'reply';
+    		if (!isset($CI->$type_p) || 'object'!=gettype($CI->$type_p)) $CI->load->model($type.'_model',$type_p);
+    		$items = $CI->$type_p->get_children($version_id, '', '', true, null);
+    		if (count($items)) $the_type= $type;
+    	}
+    	
+    	// Path always wins
+    	$types = array('paths');
+    	foreach ($types as $type_p) {
+    		$type = rtrim($type_p, "s");
+    		if ($type == 'replie') $type = 'reply';
+    		if (!isset($CI->$type_p) || 'object'!=gettype($CI->$type_p)) $CI->load->model($type.'_model',$type_p);
+    		$items = $CI->$type_p->get_children($version_id, '', '', true, null);
+    		if (count($items)) $the_type= $type;
+    	}
+    	
+		// Ignore references
+    	
+    	return $the_type;
+    	
+    }
+    
+    public function get_distance_in_meters($distance, $units) {
+    	
+    	$distance_in_meters = 0;
+    	switch ($units) {
+    		case 'meters':
+    			$distance_in_meters = $distance;
+    			break;
+    		case 'kilometers':
+    			$distance_in_meters = $distance * 1000;
+    			break;
+    		case 'miles':
+    			$distance_in_meters = $distance * 1609.344;
+    			break;
+    	}
+    	
+    	return $distance_in_meters;
     	
     }
     
@@ -571,10 +739,11 @@ class Lens_model extends MY_Model {
     	
     	} elseif (isset($json['type']) && 'items-by-distance' == $json['type']) {
     		$CI =& get_instance();
-    		$distance_in_meters = $json['quantity'];
+    		$distance = $json['quantity'];
+    		$units = $json['units'];
     		$latlng = $json['coordinates'];
     		$items = $CI->versions->get_by_predicate($book_id, array('dcterms:spatial','dcterms:coverage'));
-    		$content = $this->filter_by_location($items, $latlng, $distance_in_meters);
+    		$content = $this->filter_by_location($items, $latlng, $distance, $units);
     		return $content;
     		
     	} elseif (isset($json['type']) && 'items-by-type' == $json['type'] && isset($json['content-type']) && 'table-of-contents' == $json['content-type']) {
@@ -587,6 +756,7 @@ class Lens_model extends MY_Model {
     	} elseif (isset($json['type']) && 'items-by-type' == $json['type']) {
     		$content_type = $json['content-type'];
     		$type = $category = null;
+    		$is_relational_table = false;
     		switch ($content_type) {
     			case 'all-content':
     			case 'content':
@@ -616,9 +786,17 @@ class Lens_model extends MY_Model {
     				$this->load->helper('inflector');
     				$this->load->model($content_type.'_model', plural($content_type));
     				$model = plural($content_type);
+    				$is_relational_table = true;
     				break;
     		}
     		$content = $this->$model->get_all($this->data['book']->book_id, $type, $category, true, null);
+    		if ($is_relational_table) {  // Make sure every node returned is most recent version
+	    		foreach ($content as $key => $row) {
+	    			$version = $this->versions->get_single($row->content_id, null, '', false);
+	    			$relational_content = $this->$model->get_children($version->version_id, '', '', true);
+	    			if (empty($relational_content)) unset($content[$key]);
+	    		}
+    		}
     		return $content;
     		
     	}
@@ -647,8 +825,6 @@ class Lens_model extends MY_Model {
 	    			$relational_content = $this->$model->get_children($version_id, '', '', true);
 	    			if (empty($relational_content)) unset($content[$key]);
     			}
-    		} elseif ('table-of-contents'==$content_type) {
-				// TODO
     		}
     	} elseif (isset($component['content-selector'])) {
     		$items = $component['content-selector']['items'];
@@ -675,13 +851,17 @@ class Lens_model extends MY_Model {
     	
     }
     
-    public function sort_by_predicate($contents, $field, $dir='asc') {
+    public function sort_by_predicate($contents, $field, $dir='asc', $field_is_in_content=false) {
     	
-    	// Check "built-in" fields
+    	// Check "built-in" Version fields
     	$rdf_fields = $this->config->item('rdf_fields');
     	if (in_array($field, $rdf_fields)) {
     		$name = array_search($field, $rdf_fields);
-    		usort($contents, array(new LensFieldCmpClosure($name, $dir), "call"));
+    		if ($field_is_in_content) {
+    			usort($contents, array(new LensContentFieldCmpClosure($name, $dir), "call"));
+    		} else {
+    			usort($contents, array(new LensVersionFieldCmpClosure($name, $dir), "call"));
+    		}
     		return $contents;
     		
     	// Check RDF fields
@@ -694,6 +874,34 @@ class Lens_model extends MY_Model {
     		$uri = $base.$name;
     		usort($contents, array(new LensRDFCmpClosure($uri, $dir), "call"));
     		return $contents;
+    	}
+    	
+    }
+    
+    public function get_num_string_matches($item, $field='', $match='') {
+    	
+    	// Check "built-in" fields
+    	$rdf_fields = $this->config->item('rdf_fields');
+    	if (in_array($field, $rdf_fields)) {
+    		$name = array_search($field, $rdf_fields);
+    		if (isset($item->{$name})) {
+    			return substr_count(strtolower($item->{$name}), $match);
+    		} elseif (isset($item->versions[0]->{$name})) {
+    			return substr_count(strtolower($item->versions[0]->{$name}), $match);
+    		}
+    		
+    		// Check RDF fields
+    	} else {
+    		$ns = $this->config->item('namespaces');
+    		$arr = explode(':', $field);
+    		$prefix = $arr[0];
+    		$name =@ $arr[1];
+    		$base = (array_key_exists($prefix, $ns)) ? $ns[$prefix] : '';
+    		$uri = $base.$name;
+    		if (isset($item->versions[0]->rdf[$uri]) && isset($item->versions[0]->rdf[$uri][0]['value'])) {
+    			return substr_count(strtolower($item->versions[0]->rdf[$uri][0]['value']), $match);
+    		}
+    		return 0;
     	}
     	
     }
@@ -813,14 +1021,63 @@ class Lens_model extends MY_Model {
 
 }
 
+/** 
+ * Sorting functions
+ */
+
+function lens_visit_date_cmp_asc($a, $b) {
+	if ($a->visit_date == $b->visit_date) return 0;
+	return ($a->visit_date< $b->visit_date) ? -1 : 1;
+}
+function lens_visit_date_cmp_desc($a, $b) {
+	if ($a->visit_date== $b->visit_date) return 0;
+	return ($a->visit_date< $b->visit_date) ? 1 : -1;
+}
+
+function lens_distance_cmp_asc($a, $b) {
+	if ($a->distance == $b->distance) return 0;
+	return ($a->distance< $b->distance) ? -1 : 1;
+}
+function lens_distance_cmp_desc($a, $b) {
+	if ($a->distance== $b->distance) return 0;
+	return ($a->distance< $b->distance) ? 1 : -1;
+}
+
+function lens_relationship_count_cmp_asc($a, $b) {
+	if ($a->num_relations== $b->num_relations) return 0;
+	return ($a->num_relations< $b->num_relations) ? -1 : 1;
+}
+function lens_relationship_count_cmp_desc($a, $b) {
+	if ($a->num_relations == $b->num_relations) return 0;
+	return ($a->num_relations< $b->num_relations) ? 1 : -1;
+}
+
+function lens_relation_type_cmp_asc($a, $b) {
+	if ($a->relation_type == $b->relation_type) return 0;
+	return ($a->relation_type< $b->relation_type) ? -1 : 1;
+}
+function lens_relation_type_cmp_desc($a, $b) {
+	if ($a->relation_type== $b->relation_type) return 0;
+	return ($a->relation_type< $b->relation_type) ? 1 : -1;
+}
+
+function lens_string_matches_cmp_asc($a, $b) {
+	if ($a->string_matches == $b->string_matches) return 0;
+	return ($a->string_matches< $b->string_matches) ? -1 : 1;
+}
+function lens_string_matches_cmp_desc($a, $b) {
+	if ($a->string_matches== $b->string_matches) return 0;
+	return ($a->string_matches< $b->string_matches) ? 1 : -1;
+}
+
 /**
  * Sorting functions that can be passed variables
  * https://stackoverflow.com/questions/8230538/pass-extra-parameters-to-usort-callback
  */
 
-function lens_field_cmp($a, $b, $meta, $dir='asc') {
-	$name_a = $a->versions[0]->{$meta};
-	$name_b = $b->versions[0]->{$meta};
+function lens_content_field_cmp($a, $b, $meta, $dir='asc') {
+	$name_a = $a->{$meta};
+	$name_b = $b->{$meta};
 	if ('desc' == $dir) {
 		return strcasecmp($name_b, $name_a);
 	} else {
@@ -828,7 +1085,7 @@ function lens_field_cmp($a, $b, $meta, $dir='asc') {
 	}
 }
 
-class LensFieldCmpClosure {
+class LensContentFieldCmpClosure {
 	private $meta;
 	private $dir;
 	
@@ -838,7 +1095,31 @@ class LensFieldCmpClosure {
 	}
 	
 	function call( $a, $b ) {
-		return lens_field_cmp($a, $b, $this->meta, $this->dir);
+		return lens_content_field_cmp($a, $b, $this->meta, $this->dir);
+	}
+}
+
+function lens_version_field_cmp($a, $b, $meta, $dir='asc') {
+	$name_a = $a->versions[0]->{$meta};
+	$name_b = $b->versions[0]->{$meta};
+	if ('desc' == $dir) {
+		return strcasecmp($name_b, $name_a);
+	} else {
+		return strcasecmp($name_a, $name_b);
+	}
+}
+
+class LensVersionFieldCmpClosure {
+	private $meta;
+	private $dir;
+	
+	function __construct( $meta, $dir ) {
+		$this->meta = $meta;
+		$this->dir = $dir;
+	}
+	
+	function call( $a, $b ) {
+		return lens_version_field_cmp($a, $b, $this->meta, $this->dir);
 	}
 }
 

@@ -13,7 +13,7 @@ $this->template->add_js("\nvar strong_password_enabled=".$this->config->item('st
 <?$this->template->add_js('system/application/views/arbors/admin/admin.js')?>
 <script>
 $(document).ready(function() {
-$('input[name="password"]').on('keyup', function() {
+	$('input[name="password"]').on('keyup', function() {
 	    if (!strong_password_enabled) return;
 		var passwd = $(this).val();
 		var $bar = $('.strong_password_bar');
@@ -52,7 +52,7 @@ if (isset($_POST['registration_key'])) $registration_key = trim(htmlspecialchars
 		<table class="form_fields">
 			<tr>
 				<td class="login_header" colspan="2">
-					<img src="application/views/modules/login/scalar_logo.png" alt="scalar_logo" width="75" height="68" />
+					<img src="application/views/modules/login/scalar_logo.png" alt="Scalar logo" width="75" height="68" />
 					<h4>Please register a new account below</h4>
 				</td>
 			</tr>

@@ -100,6 +100,9 @@
 							case 'visualization':
 								base.renderVisualization($widget);
 								break;
+              case 'lens':
+                base.renderLens($widget);
+                break;
 							case 'map':
                 if(typeof page.pendingDeferredScripts.GoogleMaps == 'undefined'){
                     page.pendingDeferredScripts.GoogleMaps = [];
@@ -110,12 +113,14 @@
                             page.pendingDeferredScripts.GoogleMaps[i].resolve();
                         }
                     });
+                    promise = $.Deferred();
+                    page.pendingDeferredScripts.GoogleMaps.push(promise);
+                    $.when(promise).then($.proxy(function(){
+                        base.renderMap($widget);
+                    },this));
+                } else {
+                  base.renderMap($widget);
                 }
-                promise = $.Deferred();
-                page.pendingDeferredScripts.GoogleMaps.push(promise);
-                $.when(promise).then($.proxy(function(){
-                    base.renderMap($widget);
-                },this));
 								break;
 							case 'carousel':
 								base.renderCarousel($widget);
@@ -272,6 +277,7 @@
            var visType = $widget.data( 'visformat' ) || "force-directed";
            var content = $widget.data( 'viscontent' ) || "all";
            if (content == 'all') content = 'all-content';
+           if (content == 'toc') content = 'table-of-contents';
 
            var modifiers = [];
            var contentTypes;
@@ -345,6 +351,81 @@
            visElement.scalarvis( options );
 				 };
 
+         //Handle lenses inserted into this page
+				 base.renderLens = function($widget){
+           //Grab the container for this widget
+           var $element = $widget.data('element');
+           visElement = $( '<div><div class="caption_font">Loading data...</div></div>' ).appendTo($element);
+           var descriptionElement = $widget.data('container').find('.media_description');
+           base.getLensData($widget, visElement, descriptionElement);
+         }
+
+         base.getLensData = function($widget, visElement, descriptionElement){
+           let bookId = $('link#book_id').attr('href');
+           let baseURL = $('link#approot').attr('href').replace('application', 'lenses');
+           let mainURL = `${baseURL}?book_id=${bookId}`;
+           $.ajax({
+             url:mainURL,
+             type: "GET",
+             dataType: 'json',
+             contentType: 'application/json',
+             async: true,
+             context: this,
+             success: function(response) {
+               let data = response;
+               let slug = $widget.data('nodes');
+               if (data.length > 0) {
+                 data.forEach(lens => {
+                   if (lens.slug == slug) {
+                     let url = $('link#approot').attr('href').replace('application/','') + 'lenses';
+                     $.ajax({
+                       url: url,
+                       type: "POST",
+                       dataType: 'json',
+                       contentType: 'application/json',
+                       data: JSON.stringify(lens),
+                       async: true,
+                       context: this,
+                       success: (data) => {
+                         if ('undefined' != typeof(data.error)) {
+                           console.log('There was an error attempting to get Lens data: '+data.error);
+                           return;
+                         };
+                         scalarapi.parsePagesByType(data.items);
+                        base.handleLensResults(data, visElement, descriptionElement)
+                       },
+                       error: function error(response) {
+                          console.log('There was an error attempting to communicate with the server.');
+                       }
+                     });
+                   }
+                 });
+               } else {
+                 descriptionElement.parent().prepend('Unable to load lens; it may not have been made public yet.');
+               }
+             },
+             error: function error(response) {
+                console.log('There was an error attempting to communicate with the server.');
+                console.log(response);
+             }
+           });
+         }
+
+         base.handleLensResults = function(lensObject, visElement, descriptionElement) {
+           if (lensObject.visualization) {
+             var visOptions = {
+                 modal: false,
+                 widget: true,
+                 content: 'lens',
+                 caption: descriptionElement,
+                 lens: lensObject
+             };
+             visElement.empty();
+             visElement.scalarvis(visOptions);
+           }
+           descriptionElement.prepend('<span class="viz-icon lens"></span>');
+         }
+
 				 //Handle Google Maps inserted into this page
 				 base.renderMap = function($widget){
             //Grab the container for this widget
@@ -402,24 +483,25 @@
                      var node = nodes[ i ];
                      for ( var p in properties ) {
                        var property = properties[ p ];
-                       if ( node.current.properties[ property ] != null ) {
-                         var o = node.current.properties[ property ].length;
-                         for ( j = 0; j < o; j++ ) {
-                           var label = null;
-                           if(page.addMarkerFromLatLonStrToMap(
-                             node.current.properties[ property ][ j ].value,
-                             node.getDisplayTitle(),
-                             node.current.description,
-                             node.url,
-                             map,
-                             infoWindow,
-                             node.getAbsoluteThumbnailURL(),
-                             label,
-                             $gmaps,
-                             this_markers
-                           )){
-
-                             hasNodes = true;
+                       if (node.current) {
+                         if ( node.current.properties[ property ] != null ) {
+                           var o = node.current.properties[ property ].length;
+                           for ( j = 0; j < o; j++ ) {
+                             var label = null;
+                             if(page.addMarkerFromLatLonStrToMap(
+                               node.current.properties[ property ][ j ].value,
+                               node.getDisplayTitle(),
+                               node.current.description,
+                               node.url,
+                               map,
+                               infoWindow,
+                               node.getAbsoluteThumbnailURL(),
+                               label,
+                               $gmaps,
+                               this_markers
+                             )){
+                               hasNodes = true;
+                             }
                            }
                          }
                        }
@@ -968,7 +1050,6 @@
 
            if ( inline ) {
 
-
              $slot.addClass(align+'_slot');
              $widget.after( $slot );
              $widget.hide();
@@ -977,7 +1058,7 @@
 
                // wrap the widget in a body copy element so its alignment happens inside the
                // dimensions of the body copy
-               if (!$slot.parent().hasClass('body_copy')) {
+               if ($slot.parents('.body_copy').length == 0) {
                  $slot.wrap('<div class="body_copy"></div>');
                }
 
@@ -1045,20 +1126,20 @@
               var caption_type = $widget.data('caption');
               if(caption_type=='custom_text'){
                 $descriptionPane.html('<p>'+$widget.data('custom_caption')+'</p>').css('display','block');
-              }else {
+              } else {
                 (function($widget,$descriptionPane,caption_type,slug){
                   var load_caption = function(node){
                     switch ( caption_type ) {
 
               				case 'title':
-              				description = node.getDisplayTitle();
+              				description = '<div><a href="' + node.url + '"><strong>' + node.getDisplayTitle() + '</strong></a></div>';
               				break;
 
               				case 'title_and_description':
               				if ( node.current.description != null ) {
-              					description = '<strong>' + node.getDisplayTitle() + '</strong><br>' + node.current.description;
+              					description = '<div><a href="' + node.url + '"><strong>' + node.getDisplayTitle() + '</strong></a><br>' + node.current.description + '</div>';
               				} else {
-              					description = node.getDisplayTitle();
+              					description = '<div><a href="' + node.url + '"><strong>' + node.getDisplayTitle() + '</strong></a></div>';
               				}
               				break;
 

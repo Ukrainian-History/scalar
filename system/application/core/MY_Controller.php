@@ -197,7 +197,7 @@ class MY_Controller extends CI_Controller {
 		// Never use an Edition URL if requesting a Version
 		if (null !== $edition_num && null !== $this->data['url_params']['version_num']) $version_num = null;
 		
-		// Redirect a book URL or incorrect edition URL to the home page
+		// Redirect a book URL or incorrect edition URL to the same page, but in or out of the edition
 		if (empty($this->data['url_params']['page_segments']) || $edition_num != $this->data['url_params']['edition_num'] || $version_num != $this->data['url_params']['version_num']) {
 			$redirect_to = base_url().$this->data['url_params']['book_segment'];
 			$redirect_to .= ((null !== $edition_num) ? '.'.$edition_num : '') . '/';
@@ -218,7 +218,6 @@ class MY_Controller extends CI_Controller {
 
 	/**
 	 * Test a user level against logged-in status
-	 * @param 	int $book_id
 	 * @param	str $level
 	 * @return 	bool
 	 */
@@ -232,14 +231,18 @@ class MY_Controller extends CI_Controller {
 
 	/**
 	 * Protect a book against a user level
-	 * @param 	int $book_id
 	 * @param	str	$level
 	 * @return 	null
 	 */
 
-	protected function protect_book($level='Editor') {
+	protected function protect_book($level='Editor', $user_id=0) {
 
-		if (!$this->login_is_book_admin($level)) $this->kickout();
+		$kickout = true;
+		 
+		if (!empty($user_id) && isset($this->data['login']->user_id) && $this->data['login']->user_id == $user_id) $kickout = false;
+		if ($this->login_is_book_admin($level)) $kickout = false;
+		
+		if ($kickout) $this->kickout();
 
 	}
 
@@ -298,6 +301,28 @@ class MY_Controller extends CI_Controller {
 		}
 		header('Location: '.$url);
 		exit;
+		
+	}
+	
+	/**
+	 * Test whether the language file contains the right email fields
+	 * @return bool
+	 */
+	
+	protected function can_email($type='') {
+		
+		// TODO: test for existance of SMTP?
+		
+		$host = $this->config->item('smtp_host');
+		if (!$host || empty($host)) return false;
+		
+		switch($type) {
+			case 'lens_submitted':
+				if (!$this->lang->line('email.lens_submitted_subject')) return false;
+				return true;
+				break;
+		}
+		return false;
 		
 	}
 	

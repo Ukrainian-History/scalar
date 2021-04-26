@@ -52,7 +52,7 @@ window.scalarvis = { instanceCount: -1 };
     base.VisualizationTypes = {
       'force-directed': 'Force-directed',
       'grid': 'Grid',
-      /*'list': 'List',*/
+      'list': 'List',
       'map': 'Map',
       'radial': 'Radial',
       'tree': 'Tree',
@@ -77,12 +77,12 @@ window.scalarvis = { instanceCount: -1 };
     }
     base.VisualizationSorts = {
       'none': 'Select a sort...',
-      'alphabetical': 'A-Z'/*,
-      'creation-date': 'date created',
-      'edit-date': 'date last modified',
-      'type': 'item type',
-      'relationship-count': 'relationship count',
-      'visit-date': 'visit date'*/
+      'alphabetical': 'A-Z',
+      'creation-date': 'Date created',
+      'edit-date': 'Date last modified',
+      'type': 'Item type',
+      'relationship-count': 'Relationship count',
+      'visit-date': 'Visit date'
     }
     base.popoverTemplate = '<div class="popover vis-help caption_font" role="tooltip"><div class="arrow"></div><h3 class="popover-title"></h3><div class="popover-content"></div></div>';
     base.currentNode = scalarapi.model.getCurrentPageNode();
@@ -108,11 +108,11 @@ window.scalarvis = { instanceCount: -1 };
         base.$el.attr({
           'tabindex': '-1',
           'role': 'dialog',
-          'aria-labelledby': 'myModalLabel'
+          'aria-labelledby': 'vis-modal-title'
         });
         base.$el.append('<div class="modal-dialog modal-lg modal-xlg"><div class="modal-content index_modal"></div></div>');
         var modalContent = base.$el.find('.modal-content');
-        var header = $('<header class="modal-header"><h2 class="modal-title heading_font heading_weight">Visualization</h2><button tabindex="10000" type="button" title="Close" class="close" data-dismiss="modal"><span>Close</span></button></header>').appendTo(modalContent);
+        var header = $('<header class="modal-header"><h2 id="vis-modal-title" class="modal-title heading_font heading_weight">Visualization</h2><button tabindex="10000" type="button" title="Close" class="close" data-dismiss="modal"><span>Close</span></button></header>').appendTo(modalContent);
         var body = $('<div class="modal-body"></div>').appendTo(modalContent);
         base.visElement = $('<div class="modalVisualization"></div>').appendTo(body);
 
@@ -173,27 +173,27 @@ window.scalarvis = { instanceCount: -1 };
 
         base.controls = $('<div class="vis-controls form-inline form-group-sm"></div>').appendTo(base.visElement);
 
-        var controls_html = '<div class="vis-control-header"><b>Type</b></br><select class="vis-type-control form-control">';
+        var controls_html = '<div id="vis-type-label" class="vis-control-header"><b>Type</b></br><select aria-labelledby="vis-type-label" class="vis-type-control form-control">';
         for (var prop in base.VisualizationTypes) {
           controls_html += '<option value="' + prop + '">' + base.VisualizationTypes[prop] + '</option>';
         }
         controls_html += '</select></div> ' +
-          '<div class="vis-control-header"><b>Content</b></br><select class="vis-content-control form-control">';
+          '<div id="vis-content-label" class="vis-control-header"><b>Content</b></br><select aria-labelledby="vis-content-label" class="vis-content-control form-control">';
         for (var prop in base.VisualizationContent) {
           controls_html += '<option value="' + prop + '">' + base.VisualizationContent[prop] + '</option>';
         }
         controls_html += '</select> ' +
-          '<select class="vis-filter-control form-control">';
+          '<select aria-labelledby="vis-content-label" class="vis-filter-control form-control">';
         for (var prop in base.VisualizationFilters) {
           controls_html += '<option value="' + prop + '">' + base.VisualizationFilters[prop] + '</option>';
         }
         controls_html += '</select></div> ' +
-          '<div class="vis-control-header"><b>Sort</b></br><select class="vis-sort-control form-control">';
+          '<div id="vis-sort-label" class="vis-control-header"><b>Sort</b></br><select aria-labelledby="vis-sort-label" class="vis-sort-control form-control">';
         for (var prop in base.VisualizationSorts) {
           controls_html += '<option value="' + prop + '">' + base.VisualizationSorts[prop] + '</option>';
         }
         controls_html += '</select> ' +
-          '<select class="vis-sort-order-control form-control">' +
+          '<select aria-labelledby="vis-sort-label" class="vis-sort-order-control form-control">' +
           '<option value="none">Select order...</option>' +
           '<option value="ascending">ascending</option>' +
           '<option value="descending">descending</option>' +
@@ -212,7 +212,7 @@ window.scalarvis = { instanceCount: -1 };
 
       // create visualization div
       base.visualization = $('<div id="' + base.instanceId + '" class="scalarvis"></div>').appendTo(base.visElement);
-      if (base.options.content != 'current') {
+      if (!base.isVisOfCurrentPage()) {
         base.visualization.css('padding', '0');
       }
 
@@ -226,6 +226,11 @@ window.scalarvis = { instanceCount: -1 };
         visFooter.css('text-align', 'center');
       }
 
+      if (options.caption) {
+        visFooter.append($(options.caption));
+        visFooter.css('text-align', 'left');
+      }
+
       // help popover
       base.helpButton = $('<button class="btn btn-link btn-xs" data-toggle="popover" data-placement="top">About this visualization</button>');
       visFooter.append(base.helpButton);
@@ -236,8 +241,9 @@ window.scalarvis = { instanceCount: -1 };
       });
 
       // legend popover
-      if (base.getFormat() != "tagcloud") {
-        visFooter.append('|');
+      let format = base.getFormat();
+      if (format != "tagcloud" && format != "list" && format != "word-cloud" && format != "map") {
+        visFooter.append(' | ');
         base.legendButton = $('<button class="btn btn-link btn-xs" data-toggle="popover" data-placement="top" >Legend</button>');
         visFooter.append(base.legendButton);
         var type, color, name,
@@ -264,12 +270,12 @@ window.scalarvis = { instanceCount: -1 };
       }
 
       if (!isMobile) {
-        base.inspectorSpan = $('<span>|</span>').appendTo(visFooter);
+        base.inspectorSpan = $('<span> | </span>').appendTo(visFooter);
         base.inspectorButton = $('<button class="btn btn-link btn-xs">Inspector</button>').appendTo(base.inspectorSpan);
         base.inspectorButton.on('click', base.toggleInspector);
 
-        visFooter.append('|');
-        base.fullScreenButton = $('<button class="btn btn-link btn-xs"><img style="margin-top: -1px;" src="' + modules_uri + '/cantaloupe/images/fs_icon@2x.png" width="15" height="12"/> Full screen</button>');
+        visFooter.append(' | ');
+        base.fullScreenButton = $('<button class="btn btn-link btn-xs"><img style="margin-top: -1px;" src="' + modules_uri + '/cantaloupe/images/fs_icon@2x.png" width="15" height="12" alt=""/> Full screen</button>');
         visFooter.append(base.fullScreenButton);
         base.fullScreenButton.on('click', base.enterFullScreen);
       }
@@ -289,72 +295,78 @@ window.scalarvis = { instanceCount: -1 };
     };
 
     base.toggleInspector = function() {
-      base.inspectorVisible = !base.inspectorVisible;
-      if (base.inspectorVisible) {
-        base.inspector.removeClass('hidden');
-      } else {
-        base.inspector.addClass('hidden');
-      }
-      if (!base.visStarted) {
-        base.visualize();
-      } else {
-        base.filter();
-        base.draw();
+      if (!isMobile) {
+        base.inspectorVisible = !base.inspectorVisible;
+        if (base.inspectorVisible) {
+          base.inspector.removeClass('hidden');
+        } else {
+          base.inspector.addClass('hidden');
+        }
+        if (!base.visStarted) {
+          base.visualize();
+        } else {
+          base.filter();
+          base.draw();
+        }
       }
     }
 
     base.updateInspector = function() {
-      let visWidth = base.visElement.width();
-      if ((visWidth <= 700 && visWidth != 0) || base.getFormat() == 'word-cloud') {
-        if (base.inspectorVisible) {
-          base.toggleInspector();
+      if (!isMobile) {
+        let visWidth = base.visElement.width();
+        if ((visWidth <= 700 && visWidth != 0) || base.getFormat() == 'word-cloud') {
+          if (base.inspectorVisible) {
+            base.toggleInspector();
+          }
+          base.inspectorSpan.hide();
+        } else {
+          base.inspectorSpan.show();
         }
-        base.inspectorSpan.hide();
-      } else {
-        base.inspectorSpan.show();
-      }
-      base.inspector.empty();
-      if (base.selectedNodes.length > 0) {
-        let node = base.selectedNodes[base.selectedNodes.length - 1];
-        base.addInspectorInfoForNode(node);
-      } else {
-        base.inspector.append('<p>No items selected.</p>');
+        base.inspector.empty();
+        if (base.selectedNodes.length > 0) {
+          let node = base.selectedNodes[base.selectedNodes.length - 1];
+          base.addInspectorInfoForNode(node);
+        } else {
+          base.inspector.append('<p>No items selected.</p>');
+        }
       }
     }
 
     base.addInspectorInfoForNode = function(node) {
-      base.inspector.append('<h3 class="inspector-title heading_weight">' + node.title + '</h3>');
-      let inspectorInfo;
-      if (node.scalarTypes.page != null) {
-        inspectorInfo = $('<div class="page-preview">' +
-          '<p class="inspector-description"></p>' +
-          '<div class="inspector-buttons">' +
-            '<a class="btn btn-primary btn-xs view-node-btn" role="button" target="_blank" href="' + node.url + '">View page</a> ' +
-          '</div>' +
-          '<h4>Details</h4>' +
-          '<div class="citations citations_metadata"></div>' +
-        '</div>').appendTo(base.inspector);
-      } else {
-        let thumbnailClass = 'inspector-thumbnail';
-        let thumbnailUrl = '#';
-        if (node.thumbnail) {
-          thumbnailUrl = node.thumbnail;
+      if (node) {
+        base.inspector.append('<h3 class="inspector-title heading_weight">' + node.title + '</h3>');
+        let inspectorInfo;
+        if (node.scalarTypes.page != null) {
+          inspectorInfo = $('<div class="page-preview">' +
+            '<p class="inspector-description"></p>' +
+            '<div class="inspector-buttons">' +
+              '<a class="btn btn-primary btn-xs view-node-btn" role="button" target="_blank" href="' + node.url + '">View page</a> ' +
+            '</div>' +
+            '<h4>Details</h4>' +
+            '<div class="citations citations_metadata"></div>' +
+          '</div>').appendTo(base.inspector);
         } else {
-          thumbnailClass += ' hidden';
+          let thumbnailClass = 'inspector-thumbnail';
+          let thumbnailUrl = '#';
+          if (node.thumbnail) {
+            thumbnailUrl = node.thumbnail;
+          } else {
+            thumbnailClass += ' hidden';
+          }
+          inspectorInfo = $('<div class="media-preview">' +
+            '<p class="inspector-description"></p>' +
+            '<img class="' + thumbnailClass + '" src="' + thumbnailUrl + '" alt="' + node.current.description + '" />' +
+            '<div class="inspector-buttons">' +
+              '<a class="btn btn-primary btn-xs view-node-btn" role="button" target="_blank" href="' + node.url + '">View media page</a> ' +
+              '<a class="btn btn-primary btn-xs view-media-btn" role="button" target="_blank" href="' + node.current.sourceFile + '">View source file</a>' +
+            '</div>' +
+            '<h4>Details</h4>' +
+            '<div class="citations citations_metadata"></div>' +
+          '</div>').appendTo(base.inspector);
         }
-        inspectorInfo = $('<div class="media-preview">' +
-          '<p class="inspector-description"></p>' +
-          '<img class="' + thumbnailClass + '" src="' + thumbnailUrl + '" alt="' + node.current.description + '" />' +
-          '<div class="inspector-buttons">' +
-            '<a class="btn btn-primary btn-xs view-node-btn" role="button" target="_blank" href="' + node.url + '">View media page</a> ' +
-            '<a class="btn btn-primary btn-xs view-media-btn" role="button" target="_blank" href="' + node.current.sourceFile + '">View source file</a>' +
-          '</div>' +
-          '<h4>Details</h4>' +
-          '<div class="citations citations_metadata"></div>' +
-        '</div>').appendTo(base.inspector);
+        inspectorInfo.find('.inspector-description').html(node.current.description);
+        addMetadataTableForNodeToElement(node, inspectorInfo.find('.citations_metadata'));
       }
-      inspectorInfo.find('.inspector-description').html(node.current.description);
-      addMetadataTableForNodeToElement(node, inspectorInfo.find('.citations_metadata'));
     }
 
     base.enterFullScreen = function() {
@@ -597,11 +609,47 @@ window.scalarvis = { instanceCount: -1 };
       if (!base.options.lens.components[0].modifiers) base.options.lens.components[0].modifiers = [];
     }
 
+    base.isVisOfSinglePage = function() {
+      if (base.options.content == 'current') {
+        return true;
+      } else if (base.options.content == 'lens') {
+        let items = base.options.lens.components[0]["content-selector"].items;
+        if (items) {
+          if (base.options.lens.components[0]['content-selector'].type == 'specific-items' && items.length == 1) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    base.isVisOfCurrentPage = function() {
+      if (base.options.content == 'current') {
+        return true;
+      } else if (base.options.content == 'lens') {
+        let items = base.options.lens.components[0]["content-selector"].items;
+        if (items) {
+          if (base.options.lens.components[0]['content-selector'].type == 'specific-items' && items.length == 1) {
+            if (base.currentNode) {
+              if (items[0] == base.currentNode.slug) {
+                return true;
+              }
+            }
+          }
+        }
+      }
+      return false;
+    }
+
     base.updateControls = function() {
       if (base.options.lens) {
         base.validateLens();
         base.visElement.find(".vis-type-control").val(base.options.lens.visualization.type);
-        base.visElement.find(".vis-content-control").val(base.options.lens.components[0]['content-selector']['content-type']);
+        if (base.isVisOfCurrentPage()) {
+          base.visElement.find(".vis-content-control").val('current');
+        } else {
+          base.visElement.find(".vis-content-control").val(base.options.lens.components[0]['content-selector']['content-type']);
+        }
         base.visElement.find(".vis-filter-control").val('none');
         base.visElement.find(".vis-sort-control").val('none');
         base.visElement.find(".vis-sort-order-control").val('none');
@@ -657,7 +705,7 @@ window.scalarvis = { instanceCount: -1 };
         case "comment":
         case "reply":
           var componentToHex = function(c) {
-            var hex = c.toString(16);
+            var hex = Math.round(c).toString(16);
             return hex.length == 1 ? "0" + hex : hex;
           }
           color = d3.rgb("#ffff33").darker();
@@ -847,6 +895,7 @@ window.scalarvis = { instanceCount: -1 };
       base.loadingMsgShown = false;
       base.contentNodes = [];
       base.activeNodes = [];
+      base.manuallyLoadedNodes = [];
       base.rolloverNode = null;
       base.relations = [];
       base.links = [];
@@ -857,6 +906,7 @@ window.scalarvis = { instanceCount: -1 };
       base.svg = null;
       if (base.currentNode && base.currentNode.type.id != 'lens') {
         base.selectedNodes.push(base.currentNode);
+        base.loadNode(base.currentNode.slug, 0, 0, base.updateInspector, true, false);
         base.updateInspector();
       }
       base.hasBeenDrawn = false;
@@ -943,16 +993,34 @@ window.scalarvis = { instanceCount: -1 };
 
     };
 
-    base.loadNode = function(slug, ref, depth) {
-      //console.log( 'load node' );
+    base.loadNode = function(slug, ref, depth, success = null, parseNode = true, addToManuallyLoadedNodes = true) {
       if (depth == null) {
         depth = 1;
       }
-      scalarapi.loadNode(slug, true, base.parseNode, null, depth, ref, null, 0, 100, null, null, false);
+      scalarapi.loadNode(slug, true, function(d) {
+        if (success) success(d);
+        // only add related nodes to those manually loaded if the user
+        // actually requested the load by clicking on a node
+        if (addToManuallyLoadedNodes) {
+          let node = scalarapi.getNode(slug);
+          base.manuallyLoadedNodes = base.manuallyLoadedNodes.concat(node.getRelatedNodes(null, 'both'));
+        }
+        if (parseNode) base.parseNode(d);
+      }, null, depth, ref, null, 0, 100, null, null, true);
+    }
+
+    base.removeRelatedNodesFromManuallyLoaded = function(node) {
+      let relatedNodes = node.getRelatedNodes(null, 'both');
+      relatedNodes.forEach(node => {
+        let index = base.manuallyLoadedNodes.indexOf(node);
+        if (index != -1) {
+          base.manuallyLoadedNodes.splice(index, 1);
+        }
+      });
+      base.parseNode(node);
     }
 
     base.parseNode = function(data) {
-      //console.log( 'parse node' );
       base.filter();
       base.draw(true);
     }
@@ -1101,13 +1169,24 @@ window.scalarvis = { instanceCount: -1 };
 				base.hideLoadingMsg();
 				base.loadingDone = true;
 				base.draw(true);
-				// when content is set to 'toc', we still load everything so users can drill down as far as they want
-				if (( base.options.content == 'all' ) || ( base.options.content == 'toc' )) {
+				if (base.shouldLoadAllContent()) {
 					base.loadedAllContent = true;
 					$( 'body' ).trigger( 'visLoadedAllContent' );
 				}
       }
       base.visElement.find(".vis-format-control").val(base.getFormat());
+    }
+
+    base.shouldLoadAllContent = function() {
+      // when content is set to 'toc', we still load everything so users can drill down as far as they want
+      if (base.options.content == 'all' || base.options.content == 'toc' ) {
+        return true;
+      } else if (base.options.content == 'lens') {
+        if (lens.components[0]['content-selector']['content-type'] == 'table-of-contents') {
+          return true;
+        }
+      }
+      return false;
     }
 
     base.parseData = function(json) {
@@ -1313,33 +1392,39 @@ window.scalarvis = { instanceCount: -1 };
 
           // get relationships for each node
           // if we're in a modal that means there will never be more than one modifier
-          if (base.options.modal && base.options.lens.components[0].modifiers.length > 0) {
-            n = base.contentNodes.length;
-            for (i = 0; i < n; i++) {
-              node = base.contentNodes[i];
-              relNodes = [];
-              rels = [];
-              if (base.options.lens.components[0].modifiers[0].relationship == 'any-relationship') {
-                relNodes = node.getRelatedNodes(null, "both");
-                rels = node.getRelations(null, "both");
-                relNodes.forEach((relNode, index) => {
-                  if (base.options.lens.items[relNode.url]) {
-                    base.relatedNodes.push(relNode);
-                    base.relations.push(rels[index]);
-                  }
-                });
-              } else {
-                relNodes = node.getRelatedNodes(base.options.lens.components[0].modifiers[0]['content-types'][0], "both");
-                rels = node.getRelations(base.options.lens.components[0].modifiers[0]['content-types'][0], "both");
-                relNodes.forEach((relNode, index) => {
-                  if (base.options.lens.items[relNode.url]) {
-                    base.relatedNodes.push(relNode);
-                    base.relations.push(rels[index]);
-                  }
-                });
+          // this is needed since the lens doesn't return relationships
+          // since we don't know which node was returned from which part of the lens,
+          // we cast a wide net, possibly getting more relationships than we need
+          // any extra nodes will be filtered out below
+          if (base.options.modal) {
+            if (base.options.lens.components[0].modifiers.length > 0) {
+              n = base.contentNodes.length;
+              for (i = 0; i < n; i++) {
+                node = base.contentNodes[i];
+                relNodes = [];
+                rels = [];
+                if (base.options.lens.components[0].modifiers[0].relationship == 'any-relationship') {
+                  relNodes = node.getRelatedNodes(null, "both");
+                  rels = node.getRelations(null, "both");
+                  relNodes.forEach((relNode, index) => {
+                    if (base.options.lens.items[relNode.url]) {
+                      base.relatedNodes.push(relNode);
+                      base.relations.push(rels[index]);
+                    }
+                  });
+                } else {
+                  relNodes = node.getRelatedNodes(base.options.lens.components[0].modifiers[0]['content-types'][0], "both");
+                  rels = node.getRelations(base.options.lens.components[0].modifiers[0]['content-types'][0], "both");
+                  relNodes.forEach((relNode, index) => {
+                    if (base.options.lens.items[relNode.url]) {
+                      base.relatedNodes.push(relNode);
+                      base.relations.push(rels[index]);
+                    }
+                  });
+                }
+                node.connectionCount = rels.length;
+                base.maxConnections = Math.max(base.maxConnections, node.connectionCount);
               }
-              node.connectionCount = rels.length;
-              base.maxConnections = Math.max(base.maxConnections, node.connectionCount);
             }
           } else {
             // get relationships for each node
@@ -1365,6 +1450,15 @@ window.scalarvis = { instanceCount: -1 };
               base.relations = base.relations.concat(rels);
               node.connectionCount = rels.length;
               base.maxConnections = Math.max(base.maxConnections, node.connectionCount);
+            }
+          }
+
+          // filter out any related node not actually returned by the lens or requested by the user
+          n = base.relatedNodes.length;
+          for (i = n-1; i >= 0; i--) {
+            node = base.relatedNodes[i];
+            if (base.contentNodes.indexOf(node) == -1 && base.manuallyLoadedNodes.indexOf(node) == -1) {
+              base.relatedNodes.splice(i, 1);
             }
           }
           break;
@@ -1539,13 +1633,22 @@ window.scalarvis = { instanceCount: -1 };
                   hasToc = true;
                 }
               })
-              let hasSingleType;
-              if (base.options.lens.components.length === 1 && base.options.lens.components[0]['content-selector'].type === 'items-by-type') {
-                if (base.options.lens.components[0]['content-selector']['content-type'] != 'all-content') {
-                  hasSingleType = base.options.lens.components[0]['content-selector']['content-type'];
+              let topLevelType = true;
+              if (base.options.lens.components.length === 1) {
+                let component = base.options.lens.components[0];
+                if (component['content-selector'].type === 'items-by-type') {
+                  if (component['content-selector']['content-type'] == 'all-content') {
+                    topLevelType = true;
+                  } else {
+                    topLevelType = component['content-selector']['content-type'];
+                  }
+                } else if (component['content-selector'].type === 'specific-items') {
+                  if (component['content-selector'].items.length === 1) {
+                    topLevelType = false;
+                  }
                 }
               }
-              base.updateTypeHierarchy(false, true, hasSingleType, hasToc);
+              base.updateTypeHierarchy(false, true, topLevelType, hasToc);
               break;
 
             default:
@@ -1557,10 +1660,8 @@ window.scalarvis = { instanceCount: -1 };
 
       }
 
-      //console.log( 'sorted: ' + base.sortedNodes.length );
-      //console.log( 'links: ' + base.links.length );
+      //if (!base.loadingDone) this.validateSelectedNodes();
 
-      this.validateSelectedNodes();
     }
 
     base.validateSelectedNodes = function() {
@@ -1616,12 +1717,12 @@ window.scalarvis = { instanceCount: -1 };
       base.selectedHierarchyNodes = [];
 
       // add the current node
-      //if ( base.options.content == "current" ) {
-      /*indexType = { name: "", id: "current" };
-      var nodeForCurrentContent = {title:indexType.name, type:indexType.id, isTopLevel:true, index:0, size:1, parent:types, maximizedAngle:360, children:[], descendantCount:1};
-      types.children.push(nodeForCurrentContent);
-      nodeForCurrentContent.children = setChildren(nodeForCurrentContent, [ base.currentNode ]);*/
-      //}
+      if (base.isVisOfCurrentPage()){
+        indexType = { name: "", id: "current" };
+        var nodeForCurrentContent = {title:indexType.name, type:indexType.id, isTopLevel:true, index:0, size:1, parent:base.hierarchy, maximizedAngle:360, children:[], descendantCount:1};
+        base.hierarchy.children.push(nodeForCurrentContent);
+        nodeForCurrentContent.children = setChildren(nodeForCurrentContent, [ base.currentNode ]);
+      }
 
       if (includeToc) {
         var tocNodes = scalarapi.model.getMainMenuNode().getRelatedNodes('reference', 'outgoing', true);
@@ -1678,30 +1779,46 @@ window.scalarvis = { instanceCount: -1 };
         }
       }
 
-      let isCurrentContent = false;
+      /*let isCurrentContent = false;
       if (base.options.content == "current") {
         isCurrentContent = true;
       } else if (base.options.lens) {
         if (base.options.lens.components[0]['content-selector'].items) {
-          if (base.options.lens.components[0]['content-selector'].type == 'items-by-type' && base.options.lens.components[0]['content-selector'].items.length == 1 && base.options.lens.components[0]['content-selector'].items[0] == base.currentNode.slug) {
-            isCurrentContent = true;
+          if (base.options.lens.components[0]['content-selector'].type == 'specific-items' && base.options.lens.components[0]['content-selector'].items.length == 1) {
+            if (base.currentNode) {
+              if (base.options.lens.components[0]['content-selector'].items[0] == base.currentNode.slug) {
+                isCurrentContent = true;
+              }
+            }
           }
         }
-      }
+      }*/
 
-      if (isCurrentContent) {
+      if (base.isVisOfSinglePage()) {
 
         // replace the root node with the current node if showing types
         // is not a priority
-        if (topLevelType) {
-          base.hierarchy = {
-            title: base.currentNode.title,
-            shortTitle: base.currentNode.shortTitle,
-            showsTitle: true,
-            node: base.currentNode,
-            type: base.currentNode.type.id,
-            children: null
-          };
+        if (!topLevelType) {
+          if (base.isVisOfCurrentPage()) {
+            base.hierarchy = {
+              title: base.currentNode.title,
+              shortTitle: base.currentNode.shortTitle,
+              showsTitle: true,
+              node: base.currentNode,
+              type: base.currentNode.type.id,
+              children: null
+            };
+          } else {
+            let node = scalarapi.getNode(base.options.lens.components[0]['content-selector'].items[0]);
+            base.hierarchy = {
+              title: node.title,
+              shortTitle: node.shortTitle,
+              showsTitle: true,
+              node: node,
+              type: node.type.id,
+              children: null
+            };
+          }
           if (includeRelations) {
             base.addRelationsForHierarchyNode(base.hierarchy);
           }
@@ -1727,13 +1844,17 @@ window.scalarvis = { instanceCount: -1 };
 
         case "lens":
           if (topLevelType) {
-            if (isCurrentContent) {
+            if (base.isVisOfSinglePage()) {
               typeList = [];
             } else {
               typeList = [topLevelType];
             }
           } else {
-            typeList = base.canonicalTypeOrder;
+            if (base.isVisOfSinglePage()) {
+              typeList = [];
+            } else {
+              typeList = base.canonicalTypeOrder;
+            }
           }
           break;
 
@@ -1949,7 +2070,7 @@ window.scalarvis = { instanceCount: -1 };
               // if this is a lens, don't include items not returned by the lens
               if (base.options.content == 'lens') {
                 if (base.options.lens.items) {
-                  if (!base.options.lens.items[destNode.url]) {
+                  if (base.contentNodes.indexOf(destNode) == -1 && base.manuallyLoadedNodes.indexOf(destNode) == -1) {
                     okToProcess = false;
                   }
                 }
@@ -2138,8 +2259,8 @@ window.scalarvis = { instanceCount: -1 };
     base.draw = function() {
 
       // select the current node by default
-      if (base.options.content == 'current') {
-        if ((base.selectedNodes.length == 0) && !base.loadingDone) {
+      if (base.isVisOfCurrentPage()) {
+        if (base.selectedNodes.length == 0) {
           var node = scalarapi.model.getCurrentPageNode();
           if (node != null) {
             base.selectedNodes = [node];
@@ -2152,7 +2273,10 @@ window.scalarvis = { instanceCount: -1 };
 
         case "grid":
           needsInstantiation = base.visInstance ? base.visInstance.constructor.name != 'GridVisualization' : true;
-          if (needsInstantiation) base.visInstance = new GridVisualization();
+          if (needsInstantiation) {
+            if (base.visInstance) base.visInstance.destroy();
+            base.visInstance = new GridVisualization();
+          }
           break;
 
         case "tree":
@@ -2161,32 +2285,50 @@ window.scalarvis = { instanceCount: -1 };
 
         case "radial":
           needsInstantiation = base.visInstance ? base.visInstance.constructor.name != 'RadialVisualization' : true;
-          if (needsInstantiation) base.visInstance = new RadialVisualization();
+          if (needsInstantiation) {
+            if (base.visInstance) base.visInstance.destroy();
+            base.visInstance = new RadialVisualization();
+          }
           break;
 
         case "force-directed":
           needsInstantiation = base.visInstance ? base.visInstance.constructor.name != 'ForceDirectedVisualization' : true;
-          if (needsInstantiation) base.visInstance = new ForceDirectedVisualization();
+          if (needsInstantiation) {
+            if (base.visInstance) base.visInstance.destroy();
+            base.visInstance = new ForceDirectedVisualization();
+          }
           break;
 
         case "tagcloud":
           needsInstantiation = base.visInstance ? base.visInstance.constructor.name != 'TagCloudVisualization' : true;
-          if (needsInstantiation) base.visInstance = new TagCloudVisualization();
+          if (needsInstantiation) {
+            if (base.visInstance) base.visInstance.destroy();
+            base.visInstance = new TagCloudVisualization();
+          }
           break;
 
         case "map":
           needsInstantiation = base.visInstance ? base.visInstance.constructor.name != 'MapVisualization' : true;
-          if (needsInstantiation) base.visInstance = new MapVisualization();
+          if (needsInstantiation) {
+            if (base.visInstance) base.visInstance.destroy();
+            base.visInstance = new MapVisualization();
+          }
           break;
 
         case "word-cloud":
           needsInstantiation = base.visInstance ? base.visInstance.constructor.name != 'WordCloudVisualization' : true;
-          if (needsInstantiation) base.visInstance = new WordCloudVisualization();
+          if (needsInstantiation) {
+            if (base.visInstance) base.visInstance.destroy();
+            base.visInstance = new WordCloudVisualization();
+          }
           break;
 
         case "list":
           needsInstantiation = base.visInstance ? base.visInstance.constructor.name != 'ListVisualization' : true;
-          if (needsInstantiation) base.visInstance = new ListVisualization();
+          if (needsInstantiation) {
+            if (base.visInstance) base.visInstance.destroy();
+            base.visInstance = new ListVisualization();
+          }
           break;
 
       }
@@ -2243,16 +2385,30 @@ window.scalarvis = { instanceCount: -1 };
         }
       }
 
+      updateNoResultsMessage(nodeArray) {
+         if (nodeArray.length == 0) {
+           if (base.visualization.find('.no-results-msg').length == 0) {
+             base.visualization.prepend('<div class="no-results-msg caption_font">One moment...</div>');
+           }
+         } else {
+           base.visualization.find('.no-results-msg').remove();
+         }
+      }
+
       // override with your own version that returns HTML
       // to insert in the "About this visualization" popover
       getHelpContent() {
         return 'This is sample help content.';
       }
 
-      // overrider with your own version that sets up the
-      // base.visualization element
+      // override to set up the base.visualization element
       setupElement() {
         // set up the element
+      }
+
+      // override to clean up the vis if neccessary
+      destroy() {
+        // clean up the vis
       }
 
     }
@@ -2302,6 +2458,8 @@ window.scalarvis = { instanceCount: -1 };
              this.gridNodes = base.contentNodes.concat();
            }
 
+           this.updateNoResultsMessage(this.gridNodes);
+
            var index = this.gridNodes.indexOf(tocNode);
            if (index != -1) {
              this.gridNodes.splice(index, 1);
@@ -2328,6 +2486,7 @@ window.scalarvis = { instanceCount: -1 };
                    var index = base.selectedNodes.indexOf(d);
                    if (index == -1) {
                      base.selectedNodes.push(d);
+                     base.loadNode(d.slug, 0, 0, base.updateInspector);
                    } else {
                      base.selectedNodes.splice(index, 1);
                    }
@@ -2430,10 +2589,10 @@ window.scalarvis = { instanceCount: -1 };
                })
                .attr('class', 'pathDot')
                .attr('cx', (d) => {
-                 return d[base.instanceId].x + (this.boxSize * .5);
+                 return d[base.instanceId] ? d[base.instanceId].x + (this.boxSize * .5) : 0;
                })
                .attr('cy', (d) => {
-                 return d[base.instanceId].y + (this.boxSize * .5);
+                 return d[base.instanceId] ? d[base.instanceId].y + (this.boxSize * .5) : 0;
                })
                .attr('r', function(d, i) { return (i == 0) ? 5 : 3; });
 
@@ -2446,10 +2605,10 @@ window.scalarvis = { instanceCount: -1 };
                })
                .attr('class', 'pathDotText')
                .attr('dx', function(d) {
-                 return d[base.instanceId].x + 3;
+                 return d[base.instanceId] ? d[base.instanceId].x + 3 : 0;
                })
                .attr('dy', function(d) {
-                 return d[base.instanceId].y + this.boxSize - 3;
+                 return d[base.instanceId] ? d[base.instanceId].y + this.boxSize - 3 : 0;
                })
                .text(function(d, i) { return (i == 0) ? '' : i; });
 
@@ -2464,7 +2623,7 @@ window.scalarvis = { instanceCount: -1 };
 
        getHelpContent() {
          var helpContent;
-         if (base.options.content != 'current') {
+         if (!base.isVisOfCurrentPage()) {
            helpContent = "This visualization shows <b>how content is interconnected</b> in this work.<ul>";
          } else {
            helpContent = "This visualization shows how <b>&ldquo;" + currentNode.getDisplayTitle() + "&rdquo;</b> is connected to other content in this work.<ul>";
@@ -2527,17 +2686,17 @@ window.scalarvis = { instanceCount: -1 };
          this.gridPathLayer.selectAll('path').attr('d', this.line);
          this.gridPathLayer.selectAll('circle.pathDot')
            .attr('cx', (d) => {
-             return d[base.instanceId].x + (this.boxSize * .5);
+             return d[base.instanceId] ? d[base.instanceId].x + (this.boxSize * .5) : 0;
            })
            .attr('cy', (d) => {
-             return d[base.instanceId].y + (this.boxSize * .5);
+             return d[base.instanceId] ? d[base.instanceId].y + (this.boxSize * .5) : 0;
            });
          this.gridPathLayer.selectAll('text.pathDotText')
            .attr('dx', (d) => {
-             return d[base.instanceId].x + 3;
+             return d[base.instanceId] ? d[base.instanceId].x + 3 : 0;
            })
            .attr('dy', (d) => {
-             return d[base.instanceId].y + this.boxSize - 3;
+             return d[base.instanceId] ? d[base.instanceId].y + this.boxSize - 3 : 0;
            });
 
          var visPos = base.visualization.position();
@@ -2678,6 +2837,7 @@ window.scalarvis = { instanceCount: -1 };
           this.root.descendants().forEach((d,i) => {
             d._children = d.children;
           })
+          this.updateNoResultsMessage(base.sortedNodes);
           this.container = base.svg.selectAll('g.container');
           // collapse all nodes except the root and its children
           this.branchExpand(this.root);
@@ -2696,10 +2856,10 @@ window.scalarvis = { instanceCount: -1 };
 
       getHelpContent() {
         var helpContent;
-        if (base.options.content != 'current') {
+        if (!base.isVisOfCurrentPage()) {
           helpContent = "This visualization shows <b>how content is interconnected</b> in this work.<ul>";
         } else {
-          helpContent = "This visualization shows how <b>&ldquo;" + currentNode.getDisplayTitle() + "&rdquo;</b> is connected to other content in this work.<ul>";
+          helpContent = "This visualization shows how <b>&ldquo;" + base.currentNode.getDisplayTitle() + "&rdquo;</b> is connected to other content in this work.<ul>";
         }
         helpContent += "<li>Each circle represents a piece of content, color-coded by type.</li>" +
           "<li>Click and hold to drag.</li>" +
@@ -2846,8 +3006,8 @@ window.scalarvis = { instanceCount: -1 };
               this.branchToggle(d);
               this.pathUpdate(this.root);
               if (base.isHierarchyNodeMaximized(d)) {
-                if (base.options.content == "current") {
-                  setTimeout(function() { base.loadNode(d.data.node.slug, false, 2); }, 500);
+                if (base.isVisOfCurrentPage()) {
+                  setTimeout(function() { base.loadNode(d.data.node.slug, false, 2, base.updateInspector); }, 500);
                 }
               }
             }
@@ -2997,6 +3157,8 @@ window.scalarvis = { instanceCount: -1 };
           var radiusMod = 1.55;
           this.textRadiusOffset = 10;
 
+          this.updateNoResultsMessage(base.sortedNodes);
+
           // arc generator
           this.arcs = d3.arc()
             .startAngle((d) => { return d.x0 - (Math.PI * .5); })
@@ -3132,7 +3294,7 @@ window.scalarvis = { instanceCount: -1 };
 
       getHelpContent() {
         var helpContent;
-        if (((base.options.content == 'all') || (base.options.content == 'current')) && (this.currentNode != null)) {
+        if (base.options.content == 'all' || base.isVisOfCurrentPage()) {
           helpContent = "This visualization shows how <b>&ldquo;" + this.currentNode.getDisplayTitle() + "&rdquo;</b> is connected to other content in this work.<ul>";
         } else {
           helpContent = "This visualization shows <b>how content is interconnected</b> in this work.<ul>";
@@ -3190,9 +3352,9 @@ window.scalarvis = { instanceCount: -1 };
           .duration(1000)
           .attr('dx', (d) => {
             if (this.arcs.centroid(d)[0] < 0) {
-              return -(this.size.width * .5);
+              return -(this.size.width * .5) + 10;
             } else {
-              return (this.size.width * .5);
+              return (this.size.width * .5) - 10;
             }
           })
           .attr('dy', (d) => { return this.arcs.centroid(d)[1] + 4; })
@@ -3208,7 +3370,7 @@ window.scalarvis = { instanceCount: -1 };
       getPointerPoints(d) {
         var dx = this.arcs.centroid(d)[0];
         var dy = this.arcs.centroid(d)[1];
-        var hw = this.size.width * .5;
+        var hw = this.size.width * .5 - 10;
         if (this.arcs.centroid(d)[0] < 0) {
           return ((d.textWidth + 5) - hw) + ',' + dy + ' ' + ((d.textWidth + 5) - hw) + ',' + dy + ' ' + dx + ',' + dy;
         } else {
@@ -3225,6 +3387,7 @@ window.scalarvis = { instanceCount: -1 };
           if (index == -1) {
             base.selectedHierarchyNodes.push(d.data.node);
           }
+          base.loadNode(d.data.node.slug, 0, 0, base.updateInspector);
         } else {
           base.selectedNodes.splice(index, 1);
           index = base.selectedHierarchyNodes.indexOf(d.data.node);
@@ -3248,7 +3411,7 @@ window.scalarvis = { instanceCount: -1 };
         var n = descendants.length;
         for (var i=0; i<n; i++) {
           descendant = descendants[i];
-          index = base.selectedHierarchyNodes.indexOf(descendant.data.node);
+          index = base.selectedHierarchyNodes.indexOf(descendant.data);
           if (index != -1) {
             this.selectedHierarchyNodes.push(descendant);
           }
@@ -3261,9 +3424,9 @@ window.scalarvis = { instanceCount: -1 };
               .attr('class', 'selectedLabel')
               .attr('dx', (d) => {
                 if (this.arcs.centroid(d)[0] < 0) {
-                  return -(this.size.width * .5);
+                  return -(this.size.width * .5) + 10;
                 } else {
-                  return (this.size.width * .5);
+                  return (this.size.width * .5) - 10;
                 }
               })
               .attr('dy', (d) => {
@@ -3289,9 +3452,9 @@ window.scalarvis = { instanceCount: -1 };
               .attr('dx', (d) => {
                 var title = base.getShortenedString(d.data.node.getDisplayTitle(true), labelCharCount);
                 if (this.arcs.centroid(d)[0] < 0) {
-                  return -(this.size.width * .5);
+                  return -(this.size.width * .5) + 10;
                 } else {
-                  return (this.size.width * .5);
+                  return (this.size.width * .5) - 10;
                 }
               })
               .attr('dy', (d) => {
@@ -3387,7 +3550,7 @@ window.scalarvis = { instanceCount: -1 };
             return (
               ((d == this.highlightedNode) ||
                 (base.hasHierarchyNodeAsAncestor(d.data, this.highlightedNode !== null ? this.highlightedNode.data : null)) ||
-                ((base.selectedNodes.indexOf(d.data.node) != -1) && (d.data.node != null) /*&& (d == nodeForCurrentContent)*/)) &&
+                ((base.selectedNodes.indexOf(d.data.node) != -1) && (d.data.node != null))) &&
               okToHighlight)
               ? d3.rgb(color).darker()
               : color;
@@ -3637,6 +3800,8 @@ window.scalarvis = { instanceCount: -1 };
           this.forceLink.links(base.links);
           base.force.nodes(base.abstractedSortedNodes).alpha(.3);
 
+          this.updateNoResultsMessage(base.abstractedSortedNodes);
+
           this.container = base.svg.selectAll('g.container');
 
           this.linkSelection = this.container.selectAll('.link')
@@ -3668,12 +3833,11 @@ window.scalarvis = { instanceCount: -1 };
               if (index == -1) {
                 base.selectedNodes.push(d.node);
                 if (base.options.content == "current" || base.options.content == "lens") {
-                  base.loadNode(d.node.slug, false);
+                  base.loadNode(d.node.slug, false, 1, base.updateInspector);
                 }
               } else {
                 base.selectedNodes.splice(index, 1);
-                base.filter();
-                base.draw();
+                base.removeRelatedNodesFromManuallyLoaded(d.node);
               }
               base.updateInspector();
               this.updateGraph();
@@ -3732,10 +3896,10 @@ window.scalarvis = { instanceCount: -1 };
 
       getHelpContent() {
         var helpContent;
-        if (base.options.content != 'current') {
+        if (!base.isVisOfCurrentPage()) {
           helpContent = "This visualization shows <b>how content is interconnected</b> in this work.<ul>";
         } else {
-          helpContent = "This visualization shows how <b>&ldquo;" + currentNode.getDisplayTitle() + "&rdquo;</b> is connected to other content in this work.<ul>";
+          helpContent = "This visualization shows how <b>&ldquo;" + base.currentNode.getDisplayTitle() + "&rdquo;</b> is connected to other content in this work.<ul>";
         }
 
         helpContent += "<li>Each dot represents a piece of content, color-coded by type.</li>" +
@@ -3904,35 +4068,35 @@ window.scalarvis = { instanceCount: -1 };
       draw() {
         super.draw();
 
-    	if (null == this.map) return;
+      	if (null == this.map) return;
 
-    	this.clearMarkers();
-    	var bounds = new google.maps.LatLngBounds();
-    	var urls = [];
-    	// Contents of paths connected by lines
-    	for (var j = 0; j < base.sortedNodes.length; j++) {
-    		if ('undefined' == typeof(base.sortedNodes[j].scalarTypes.path)) continue;
-    		var pathTitle = base.sortedNodes[j].getDisplayTitle();
-    		var pathCoordinates = [];
-    		for (var k = 0; k < base.sortedNodes[j].outgoingRelations.length; k++) {
-    			if (null == base.sortedNodes[j].outgoingRelations[k].index) continue;  // Not part of the path
-    			if (null == base.sortedNodes[j].outgoingRelations[k].target) continue;  // Not part of the path
-    			if (-1 == urls.indexOf(base.sortedNodes[j].outgoingRelations[k].target.url)) urls.push(base.sortedNodes[j].outgoingRelations[k].target.url);
-    			var title = '<p style="margin-bottom:8px;">'+base.sortedNodes[j].outgoingRelations[k].startString+' of the "'+pathTitle+'" path<br /><b><a href="'+base.sortedNodes[j].outgoingRelations[k].target.url+'">'+base.sortedNodes[j].outgoingRelations[k].target.getDisplayTitle()+'</a></b></p>';
-    			var thumbnail = base.sortedNodes[j].outgoingRelations[k].target.thumbnail;
-    			var description = base.sortedNodes[j].outgoingRelations[k].target.getDescription(true);
-    			if (null != thumbnail) title += '<img src="'+thumbnail+'" align="left" style="max-width:100px;max-height:100px;margin-right:12px;" />';
-    			if (description && description.length) title += '<p style="margin-bottom:8px;">'+description+'</p>';
-    			var icon = this.getIcon(base.sortedNodes[j].outgoingRelations[k].target.scalarTypes);
-    			var coords = this.drawMarkers(base.sortedNodes[j].outgoingRelations[k].target, title, icon);
-    	        if (coords.length) {
-    	        	for (var m = 0; m < coords.length; m++) {
-    	        		pathCoordinates.push(coords[m]);
-    	        		bounds.extend( new google.maps.LatLng(coords[m].lat, coords[m].lng) );
-    	        	};
-    	        }
-    		}
-    		var path_key = this.paths.length;
+      	this.clearMarkers();
+      	var bounds = new google.maps.LatLngBounds();
+      	var urls = [];
+      	// Contents of paths connected by lines
+      	for (var j = 0; j < base.sortedNodes.length; j++) {
+      		if ('undefined' == typeof(base.sortedNodes[j].scalarTypes.path)) continue;
+      		var pathTitle = base.sortedNodes[j].getDisplayTitle();
+      		var pathCoordinates = [];
+      		for (var k = 0; k < base.sortedNodes[j].outgoingRelations.length; k++) {
+      			if (null == base.sortedNodes[j].outgoingRelations[k].index) continue;  // Not part of the path
+      			if (null == base.sortedNodes[j].outgoingRelations[k].target) continue;  // Not part of the path
+      			if (-1 == urls.indexOf(base.sortedNodes[j].outgoingRelations[k].target.url)) urls.push(base.sortedNodes[j].outgoingRelations[k].target.url);
+      			var title = '<p style="margin-bottom:8px;">'+base.sortedNodes[j].outgoingRelations[k].startString+' of the "'+pathTitle+'" path<br /><b><a href="'+base.sortedNodes[j].outgoingRelations[k].target.url+'">'+base.sortedNodes[j].outgoingRelations[k].target.getDisplayTitle()+'</a></b></p>';
+      			var thumbnail = base.sortedNodes[j].outgoingRelations[k].target.thumbnail;
+      			var description = base.sortedNodes[j].outgoingRelations[k].target.getDescription(true);
+      			if (null != thumbnail) title += '<img src="'+thumbnail+'" align="left" style="max-width:100px;max-height:100px;margin-right:12px;" />';
+      			if (description && description.length) title += '<p style="margin-bottom:8px;">'+description+'</p>';
+      			var icon = this.getIcon(base.sortedNodes[j].outgoingRelations[k].target.scalarTypes);
+      			var coords = this.drawMarkers(base.sortedNodes[j].outgoingRelations[k].target, title, icon);
+      	        if (coords.length) {
+      	        	for (var m = 0; m < coords.length; m++) {
+      	        		pathCoordinates.push(coords[m]);
+      	        		bounds.extend( new google.maps.LatLng(coords[m].lat, coords[m].lng) );
+      	        	};
+      	        }
+      		}
+      		var path_key = this.paths.length;
             this.paths[path_key] = new google.maps.Polyline({
                 path: pathCoordinates,
                 geodesic: true,
@@ -3941,33 +4105,40 @@ window.scalarvis = { instanceCount: -1 };
                 strokeWeight: 2
             });
             this.paths[path_key].setMap(this.map);
-    	}
-    	// All other nodes
-    	for (var j = 0; j < base.sortedNodes.length; j++) {
-    		if (-1 != urls.indexOf(base.sortedNodes[j].url)) continue;
-    		var title = '<p style="margin-bottom:8px;"><b><a href="'+base.sortedNodes[j].url+'">'+base.sortedNodes[j].getDisplayTitle()+'</a></b></p>';
-			var thumbnail = base.sortedNodes[j].thumbnail;
-			var description = base.sortedNodes[j].getDescription(true);
-			if (null != thumbnail) title += '<img src="'+thumbnail+'" align="left" style="max-width:100px;max-height:100px;margin-right:12px;" />';
-			if (description && description.length) title += '<p style="margin-bottom:8px;">'+description+'</p>';
-        	var icon = this.getIcon(base.sortedNodes[j].scalarTypes);
-    		var coords = this.drawMarkers(base.sortedNodes[j], title, icon);
-    	    if (coords.length) {
-	        	for (var m = 0; m < coords.length; m++) {
-	        		bounds.extend( new google.maps.LatLng(coords[m].lat, coords[m].lng) );
-	        	};
-    	    }
-    	}
-    	this.map.fitBounds(bounds);
-    	if (!this.markers.length) {
-    		this.displayNoContentWarning();
-    	} else {
-    		this.removeNoContentWarning();
-    	}
+      	}
+      	// All other nodes
+      	for (var j = 0; j < base.sortedNodes.length; j++) {
+      		if (-1 != urls.indexOf(base.sortedNodes[j].url)) continue;
+      		var title = '<p style="margin-bottom:8px;"><b><a href="'+base.sortedNodes[j].url+'">'+base.sortedNodes[j].getDisplayTitle()+'</a></b></p>';
+  			var thumbnail = base.sortedNodes[j].thumbnail;
+  			var description = base.sortedNodes[j].getDescription(true);
+  			if (null != thumbnail) title += '<img src="'+thumbnail+'" align="left" style="max-width:100px;max-height:100px;margin-right:12px;" />';
+  			if (description && description.length) title += '<p style="margin-bottom:8px;">'+description+'</p>';
+          	var icon = this.getIcon(base.sortedNodes[j].scalarTypes);
+      		var coords = this.drawMarkers(base.sortedNodes[j], title, icon);
+      	    if (coords.length) {
+  	        	for (var m = 0; m < coords.length; m++) {
+  	        		bounds.extend( new google.maps.LatLng(coords[m].lat, coords[m].lng) );
+  	        	};
+      	    }
+      	}
+      	this.map.fitBounds(bounds);
+      	google.maps.event.addListener(this.map, 'idle', () => {  // Prevent map from being zoomed out so far it gets buggy
+      	   var zoom = parseInt(this.map.getZoom());
+      	   if (zoom < 1) {
+      		   this.map.setCenter(new google.maps.LatLng(0, 0));
+      		   this.map.setZoom(1);
+      	   }
+      	});
+      	if (!this.markers.length) {
+      		this.displayNoContentWarning();
+      	} else {
+      		this.removeNoContentWarning();
+      	}
       }
 
       getHelpContent() {
-        return "The map will display any chosen content that contains geospatial metadata (e.g., dcterms:spatial). In the event that pages are part of a path, route lines will be drawn between each page."; // see other vis classes for examples
+        return "This visualization will display any selected content that contains geospatial metadata (dcterms:coverage, dcterms:spatial). In the event that pages are part of a path, route lines will be drawn between each page.";
       }
 
       // one-time visualization setup
@@ -4004,7 +4175,7 @@ window.scalarvis = { instanceCount: -1 };
 
     	  base.visualization.find('.no-content-warning').remove();
     	  var $el = $('<div class="no-content-warning" style="position:absolute; z-index:999; top:0px; left:0px; right:0px; bottom:0px; text-align:center; color:#000000;"></div>').appendTo(base.visualization);
-    	  var $inner = $('<div style="background-color:rgba(255, 255, 255, 0.5); margin-top:100px; padding:30px 0px 30px 0px;">There is no geospatial metadata associated with the selected items.<br /><br /><button type="button" class="btn btn-primary btn-sm">Dismiss</button></div>').appendTo($el);
+    	  var $inner = $('<div style="background-color:rgba(255, 255, 255, 0.5); margin-top:100px; padding:30px 0px 30px 0px;">Either no items were returned, or no geospatial<br/>metadata could be found on the returned items.<br /><br /><button type="button" class="btn btn-primary btn-sm">Dismiss</button></div>').appendTo($el);
     	  $inner.find('button').on('click', function() {
     		  $(this).parent().remove();
     	  });
@@ -4042,22 +4213,23 @@ window.scalarvis = { instanceCount: -1 };
 		    	});
   				this.oms.addMarker(this.markers[key]);
   				// Infowindow
-	        this.infowindows[key] = new google.maps.InfoWindow({
-	            content: title,
-	            maxWidth: 300
-	        });
-	        $(this.markers[key]).data('infowindow', this.infowindows[key]).data('map', this.map);
-          this.markers[key].addListener('click', (evt) => {
-            base.selectedNodes = [obj];
-            base.updateInspector();
-          })
-	        this.markers[key].addListener('spider_click', function(evt) {
-	        	var infowindow = $(this).data('infowindow');
-	        	var map = $(this).data('map');
-	        	infowindow.open(map, this);
-	        });
+  				this.infowindows[key] = new google.maps.InfoWindow({
+  					content: title,
+  					maxWidth: 300
+  				});
+  				$(this.markers[key]).data('infowindow', this.infowindows[key]).data('map', this.map);
+  				this.markers[key].addListener('click', (evt) => {
+  					base.selectedNodes = [obj];
+  					base.loadNode(obj.slug, 0, 0, base.updateInspector, false);
+  					base.updateInspector();
+  				});
+  				this.markers[key].addListener('spider_click', function(evt) {
+  					var infowindow = $(this).data('infowindow');
+  					var map = $(this).data('map');
+  					infowindow.open(map, this);
+  				});
   			};
-        return coords;
+  			return coords;
       }
 
       getCoords(obj) {
@@ -4115,6 +4287,7 @@ window.scalarvis = { instanceCount: -1 };
       constructor() {
         super();
         this.words = [];
+        this.isDrawing = false;
         this.stopwords = ['a', 'about', 'above', 'across', 'after', 'afterwards']  // https://programminghistorian.org/en/lessons/counting-frequencies
         this.stopwords += ['again', 'against', 'all', 'almost', 'alone', 'along']
         this.stopwords += ['already', 'also', 'although', 'always', 'am', 'among']
@@ -4170,90 +4343,116 @@ window.scalarvis = { instanceCount: -1 };
       }
 
       draw() {
+    	if (this.isDrawing) return;
+    	this.isDrawing = true;
         super.draw();
+        base.visualization.addClass("tag_cloud caption_font");
+        if ('undefined' == typeof($.fn.jQCloud)) {
+          var approot = $('link#approot').attr('href');
+          $('head').append('<link rel="stylesheet" type="text/css" href="' + approot + 'views/melons/cantaloupe/css/vis.css">');
+          $('head').append('<link rel="stylesheet" type="text/css" href="' + approot + 'views/widgets/jQCloud/jqcloud.min.css">');
+          $.getScript(approot + 'views/widgets/jQCloud/jqcloud.min.js', () => {
+            this.drawWordCloud();
+          });
+        } else {
+          this.drawWordCloud();
+        }
       }
 
       getHelpContent() {
-        return "The Word Cloud displays the most commonly used words across main text content of the selected items. For example, if the word \"scholarship\" is present in the main text content of ten pages it will be displayed in the cloud larger than another word that is present in the text content of only five pages."; // see other vis classes for examples
+        return "This visualization shows the most commonly used words across the main text content of the selected items. For example, if the word \"scholarship\" is present in the main text content of ten pages it will be displayed larger than another word that is present in the text content of only five pages.";
       }
 
       // one-time visualization setup
       setupElement() {
         this.hasBeenDrawn = true;
-        base.visualization.empty(); // empty the element where this vis is to be shown
-        if ('undefined' == typeof($.fn.jQCloud)) {
-	        var approot = $('link#approot').attr('href');
-	        $('head').append('<link rel="stylesheet" type="text/css" href="' + approot + 'views/melons/cantaloupe/css/vis.css">');
-	        $('head').append('<link rel="stylesheet" type="text/css" href="' + approot + 'views/widgets/jQCloud/jqcloud.min.css">');
-	        $.getScript(approot + 'views/widgets/jQCloud/jqcloud.min.js', () => {
-	        	base.visualization.addClass("tag_cloud caption_font");
-	        	this.drawWordCloud();
-	        });
-        } else {
-        	this.drawWordCloud();
-        }
       }
 
       drawWordCloud() {
+        base.visualization.css('height', this.size.height + 'px');
+        //base.visualization.css('width', this.size.width + 'px');
+        if ('undefined' != typeof(base.visualization.jQCloud)) base.visualization.jQCloud('destroy');
+        base.visualization.html('<div style="font-weight:normal;">Parsing data...</div>');
+        // Create array of words
+        var j = 0;
+        setTimeout( () => {
+          this.doDrawWordCloud(j);
+        }, 1);
+      }
 
-          base.visualization.css('height', this.size.height + 'px');
-          //base.visualization.css('width', this.size.width + 'px');
-          if ('undefined' != typeof(base.visualization.jQCloud)) base.visualization.jQCloud('destroy');
-          base.visualization.empty();
-      	  // Create array of words
-          for (var j = 0; j < base.sortedNodes.length; j++) {
-          	var words = this.getWords(base.sortedNodes[j].current.content);
-          	this.words = this.mergeWords(this.words, words);
-          };
+      doDrawWordCloud(j) {
+        if (j >= base.sortedNodes.length) {
+          this.finishDrawWordCloud();
+          return;
+        };
+        if (base.sortedNodes[j]) {
+          if (base.sortedNodes[j].current) {
+            var words = this.getWords(base.sortedNodes[j].current.content);
+            this.words = this.mergeWords(this.words, words);
+          }
+          setTimeout( () => {
+            this.doDrawWordCloud(j+1);
+          }, 1);
+        } else {
+          setTimeout( () => {
+            this.doDrawWordCloud(j);
+          }, 10);
+        }
+      }
+
+      finishDrawWordCloud() {
+
           base.visualization.empty();
           // Render cloud
           base.visualization.jQCloud(this.words, {
-          	afterCloudRender: function() {
-          		removeOverflowing: false
-          	}
+            afterCloudRender: function() {
+              removeOverflowing: false
+            }
           });
+          this.updateNoResultsMessage(base.sortedNodes);
+          this.isDrawing = false;
 
       }
 
       getWords(content) {
 
-    	  if (!content) return [];
-    	  content = content.replace(/(<([^>]+)>)/ig," ");  // Strip tags
-    	  content = content.replace(/&nbsp;/g,' ');  // Non-breaking space to space
-    	  content = $('<textarea />').html(content).text();  // HTML entity decode
-    	  var words = content.split(' ');
-    	  return words;
+        if (!content) return [];
+        content = content.replace(/(<([^>]+)>)/ig," ");  // Strip tags
+        content = content.replace(/&nbsp;/g,' ');  // Non-breaking space to space
+        content = $('<textarea />').html(content).text();  // HTML entity decode
+        var words = content.split(' ');
+        return words;
 
       }
 
       mergeWords(arr1, arr2) {
 
-    	  for (var j = 0; j < arr2.length; j++) {
-    		  if (!arr2[j].length) continue;
-    		  var word = arr2[j].replace(/[^0-9a-zA-Z-]/g, '');
-    		  if (word.length < 3) continue;  // Remove empty or short
-    		  if (this.isAStopWord(word)) continue;  // Remove stop words
-    		  if (!isNaN(word) && word.length != 4) continue;  // Remove numbers if not a year
-    		  var wordIncluded = false;
-    		  for (var k = 0; k < arr1.length; k++) {
-    			  if (arr1[k].text.toLowerCase() == word.toLowerCase()) {
-    				  arr1[k].weight = arr1[k].weight + 1;
-    				  wordIncluded = true;
-    			  }
-    		  }
-    		  if (!wordIncluded) {
-    			  arr1.push({text:word, weight:1});
-    		  }
-    	  }
-    	  return arr1;
+        for (var j = 0; j < arr2.length; j++) {
+          if (!arr2[j].length) continue;
+          var word = arr2[j].replace(/[^0-9a-zA-Z-]/g, '');
+          if (word.length < 3) continue;  // Remove empty or short
+          if (this.isAStopWord(word)) continue;  // Remove stop words
+          if (!isNaN(word) && word.length != 4) continue;  // Remove numbers if not a year
+          var wordIncluded = false;
+          for (var k = 0; k < arr1.length; k++) {
+            if (arr1[k].text.toLowerCase() == word.toLowerCase()) {
+              arr1[k].weight = arr1[k].weight + 1;
+              wordIncluded = true;
+            }
+          }
+          if (!wordIncluded) {
+            arr1.push({text:word, weight:1});
+          }
+        }
+        return arr1;
 
       }
 
       isAStopWord(word) {
 
-    	  if (word.substr(0, 1) == '&') return true;
-    	  if (this.stopwords.indexOf(word.toLowerCase()) != -1) return true;
-    	  false;
+        if (word.substr(0, 1) == '&') return true;
+        if (this.stopwords.indexOf(word.toLowerCase()) != -1) return true;
+        false;
 
       }
     }
@@ -4265,29 +4464,185 @@ window.scalarvis = { instanceCount: -1 };
 
       constructor() {
         super();
-        // init any special properties needed for this visualization here
+        this.visList = null;
       }
 
       draw() {
-        // this updates the dimensions of the vis based on window size, etc.
-        // and calls setupElement if the vis was just created
         super.draw();
 
-        // add additional code here to render the vis
-        // base.hierarchy is an object containing a hierarchy of known nodes, organized by type
-        // base.sortedNodes is an array of all known nodes
+        this.updateNoResultsMessage(base.contentNodes);
+
+        // Determine if there is a author/creator field to add based on metadata
+        var candidates = {
+        		"http://ns.exiftool.ca/IPTC/IPTC/1.0/By-line": "iptc:By-line",
+        		"http://ns.exiftool.ca/IPTC/IPTC/1.0/Writer-Editor": "iptc:Writer-Editor",
+        		"http://purl.org/dc/terms/creator": "dcterms:creator"
+        }
+        var counts = {};
+        for (var j = 0; j < base.contentNodes.length; j++) {
+        	for (var uri in candidates) {
+        		if ('undefined' != typeof(base.contentNodes[j].current.properties[uri])) {
+        			if ('undefined' == typeof(counts[uri])) counts[uri] = 0;
+        			counts[uri]++;
+        		}
+        	}
+        };
+        var fieldValue = 0;
+        var fieldToAdd = null;
+        for (var field in counts) {
+        	if (counts[field] > 0 && counts[field] > fieldValue) {
+        		fieldValue = counts[field];
+        		fieldToAdd = field;
+        	}
+        };
+        if (null != fieldToAdd && !this.visList.find('td[prop="fieldToAdd"]').length) {
+        	this.visList.find('td[prop="author"]').before('<td class="lg" prop="fieldToAdd"><a href="javascript:void(null);">'+candidates[fieldToAdd]+'</a></td>');
+        };
+
+        // Output rows
+        var $tbody = this.visList.find('tbody');
+        $tbody.find('.visListRow').remove();
+        var maxLength = 100;
+        var authorFields = {};
+        for (var j = 0; j < base.contentNodes.length; j++) {
+        	// Fields
+        	var url = base.contentNodes[j].url;
+        	var title = base.contentNodes[j].current.title;
+        	if (null===title) continue;
+        	title = title.replace(/(<([^>]+)>)/gi, "");
+          	var description = ('undefined'!=typeof(base.contentNodes[j].current.description) && null!==base.contentNodes[j].current.description) ? base.contentNodes[j].current.description : '';
+          	if (description.length > maxLength) description = description.substr(0, maxLength) + '...';
+          	description = description.replace(/(<([^>]+)>)/gi, "");
+          	var content = ('undefined'!=typeof(base.contentNodes[j].current.content) && null!==base.contentNodes[j].current.content) ? base.contentNodes[j].current.content : '';
+          	if (content.length > maxLength) content = content.substr(0, maxLength) + '...';
+          	content = content.replace(/(<([^>]+)>)/gi, "");
+          	var author = base.contentNodes[j].current.properties['http://www.w3.org/ns/prov#wasAttributedTo'][0].value;  // Most recent version
+          	var authorUrl = $('link#parent').attr('href') + author ;
+          	var authorId = parseInt(authorUrl.substr(authorUrl.lastIndexOf('/')+1));
+          	var fullname = ('undefined' != typeof(base.options.lens) && 'undefined' != typeof(base.options.lens.users[authorId])) ? base.options.lens.users[authorId] : '';
+          	var lastEdited = (base.contentNodes[j].current.created) ? base.contentNodes[j].current.created.substr(0, base.contentNodes[j].current.created.indexOf('T')) : '';
+          	var versions = base.contentNodes[j].current.number;
+          	var isSelected = (base.selectedNodes.indexOf(base.contentNodes[j]) != -1) ? true : false;
+          	// Output rows
+          	var $row = $('<tr class="visListRow '+((isSelected)?'selected':'')+'" data-index="'+j+'"></div>').appendTo($tbody);
+          	$row.append('<td class="sm" prop="title"><a href="'+url+'" target="_blank">'+title+'</a></td>');
+          	$row.append('<td class="md" prop="description">'+description+'</td>');
+          	$row.append('<td class="md" prop="content">'+content+'</td>');
+          	if (null != fieldToAdd) {
+          		var valueToAdd = ('undefined'!=typeof(base.contentNodes[j].current.properties[fieldToAdd])) ? base.contentNodes[j].current.properties[fieldToAdd][0].value : '';
+          		$row.append('<td class="lg" prop="fieldToAdd">'+valueToAdd+'</td>');
+          	};
+          	$row.append('<td class="lg" prop="author"><a href="'+authorUrl+'" target="_blank">'+fullname+'</a></td>');
+          	$row.append('<td class="lg" prop="lastEdited">'+lastEdited+'</td>');
+          	$row.append('<td class="lg" prop="version" style="text-align:center;">'+versions+'</td>');
+          	// Sort-specific fields
+          	if ('undefined' != typeof(base.contentNodes[j].sorts) && 'undefined' != typeof(base.contentNodes[j].sorts.created)) {
+          		if (!this.visList.find('td[prop="created"]').length) this.visList.find('.header').append('<td class="md" prop="created" style="text-align:center;"><a href="javascript:void(null);">Date Created</a></td>');
+          		$row.append('<td class="md" prop="created" style="text-align:center;">'+base.contentNodes[j].sorts.created.split(" ")[0]+'</td>');
+          	};
+          	if ('undefined' != typeof(base.contentNodes[j].sorts) && 'undefined' != typeof(base.contentNodes[j].sorts.relationType)) {
+          		if (!this.visList.find('td[prop="relationType"]').length) this.visList.find('.header').append('<td class="md" prop="relationType" style="text-align:center;"><a href="javascript:void(null);">Item Type</a></td>');
+          		$row.append('<td class="md" prop="relationType" style="text-align:center;">'+base.contentNodes[j].sorts.relationType+'</td>');
+          	};
+          	if ('undefined' != typeof(base.contentNodes[j].sorts) && 'undefined' != typeof(base.contentNodes[j].sorts.numRelations)) {
+          		if (!this.visList.find('td[prop="numRelations"]').length) this.visList.find('.header').append('<td class="md" prop="numRelations" style="text-align:center;"><a href="javascript:void(null);"># Relations</a></td>');
+          		$row.append('<td class="md" prop="numRelations" style="text-align:center;">'+base.contentNodes[j].sorts.numRelations+'</td>');
+          	};
+          	if ('undefined' != typeof(base.contentNodes[j].sorts) && 'undefined' != typeof(base.contentNodes[j].sorts.stringMatches)) {
+          		if (!this.visList.find('td[prop="stringMatches"]').length) this.visList.find('.header').append('<td class="md" prop="stringMatches" style="text-align:center;"><a href="javascript:void(null);">Matches</a></td>');
+          		$row.append('<td class="md" prop="stringMatches" style="text-align:center;">'+base.contentNodes[j].sorts.stringMatches+'</td>');
+          	};
+          	if ('undefined' != typeof(base.contentNodes[j].sorts) && 'undefined' != typeof(base.contentNodes[j].sorts.visitDate)) {
+          		if (!this.visList.find('td[prop="visitDate"]').length) this.visList.find('.header').append('<td class="md" prop="visitDate" style="text-align:center;"><a href="javascript:void(null);">Visit Date</a></td>');
+          		var date = '';
+          		if (base.contentNodes[j].sorts.visitDate != 0) {
+          			var date = new Date(parseInt(base.contentNodes[j].sorts.visitDate));
+          			date = (date.getMonth()+1)+"/"+date.getDate()+"/"+date.getFullYear();
+          			// +" "+date.getHours()+":"+date.getMinutes()+":"+date.getSeconds();
+          		}
+          		$row.append('<td class="md" prop="visitDate" style="text-align:center;">'+date+'</td>');
+          	};
+          };
+
+          // Add/remove items from selectedNodes
+          this.visList.find('.visListRow').on('click', function() {
+         	 var $this = $(this);
+        	 var isSelected = $this.hasClass('selected') ? true : false;
+        	 var index = parseInt($this.data('index'));
+        	 var node = base.contentNodes[index];
+        	 if (isSelected) {
+        		 var match = base.selectedNodes.indexOf(node);
+        		 base.selectedNodes.splice(match, 1);
+        		 $this.removeClass('selected');
+        	 } else {
+	        	 base.selectedNodes.push(node);
+	        	 $this.addClass('selected');
+        	 };
+  	         base.updateInspector();
+          });
+
+          // Add/remove columns based on size of parent area
+          var width = parseInt(this.visList.parent().width());
+          if (width < 400) {  // sm
+        	  this.visList.find('.sm').show();
+        	  this.visList.find('.md, .lg').hide();
+          } else if (width < 600) {  // md
+        	  this.visList.find('.sm, .md').show();
+        	  this.visList.find('.lg').hide();
+          } else {  // lg
+        	  this.visList.find('.sm, .md, .lg').show();
+          };
+
       }
 
       getHelpContent() {
-        return "Some info about this visualization"; // see other vis classes for examples
+        var helpContent;
+        helpContent = "This visualization shows a list of content in this work.<ul>";
+        helpContent += "<li>Each row represents one piece of content.</li>" +
+          "<li>You can re-sort the list by clicking the headers.</li>" +
+          "<li>Click the title of any item to navigate to it.</li>";
+        return helpContent;
       }
 
       // one-time visualization setup
       setupElement() {
+
         this.hasBeenDrawn = true;
         base.visualization.empty(); // empty the element where this vis is to be shown
-        base.visualization.append('List visualization');
+        base.visualization.css('height', this.size.height + 'px');
+        var approot = $('link#approot').attr('href');
+        var css = approot + 'views/melons/cantaloupe/css/vis.css';
+        if (!$('head').find('[href="'+css+'"]').length) $('head').append('<link rel="stylesheet" type="text/css" href="' + css + '">');
+        var $overflow = $('<div style="overflow:auto;"></div>').appendTo(base.visualization);
+        $overflow.height($overflow.parent().height());
+        this.visList = $('<table class="visList"></table>').appendTo($overflow);
+        var $tbody = this.visList.append('<tbody></tbody>');
+        var $header = $('<tr class="header"></tr>').appendTo($tbody);
+        $header.append('<td class="sm" prop="title"><a href="javascript:void(null);">Title</a></td>');
+        $header.append('<td class="md" prop="description"><a href="javascript:void(null);">Description</a></td>');
+        $header.append('<td class="md" prop="content"><a href="javascript:void(null);">Content</a></td>');
+        $header.append('<td class="lg" prop="author"><a href="javascript:void(null);">Last Edited By</a></td>');
+        $header.append('<td class="lg" prop="lastEdited"><a href="javascript:void(null);">Date Edited</a></td>');
+        $header.append('<td class="lg" prop="version"><a href="javascript:void(null);">Version</a></td>');
+        $header.on('click', 'a', function() {
+        	var $this = $(this);
+        	var index = $header.find('a').index($this);
+        	if ($header.data('sortBy') != index) {
+        		$header.data('sortBy', index);
+        		$header.data('sortDir', 'asc');
+        	} else {
+        		$header.data('sortDir', (($header.data('sortDir')=='asc')?'desc':'asc'));
+        	}
+        	$tbody.find('tr:not(.header)').sort(function(a, b) {
+                if ($header.data('sortDir') == 'asc') {
+                    return $('td:eq('+$header.data('sortBy')+')', a).text().localeCompare($('td:eq('+$header.data('sortBy')+')', b).text());
+                } else {
+                    return $('td:eq('+$header.data('sortBy')+')', b).text().localeCompare($('td:eq('+$header.data('sortBy')+')', a).text());
+                }
+            }).appendTo($tbody);
+        });
       }
+
     }
 
     base.init();
@@ -4299,7 +4654,8 @@ window.scalarvis = { instanceCount: -1 };
     relations: 'all',
     format: 'grid',
     modal: false,
-    widget: false
+    widget: false,
+    caption: null
   };
 
   $.fn.scalarvis = function(options) {

@@ -2,6 +2,7 @@
   padding-left: 7.2rem;
   padding-right: 7.2rem;
   margin-top: -2rem;
+  font-size: 14px;
 }
 #lenses .lens-title {
   margin-top:0 !important;
@@ -10,6 +11,9 @@
   background:#ccc;
   height:120px;
   width:100%;
+}
+#lenses p {
+  font-size: 16px;
 }
 #lens-manager ul li {
   text-decoration: none;
@@ -24,6 +28,9 @@
 }
 #lens-manager ul li:active{
   background:#c7e6f6;
+}
+#lens-manager ul li.lens-item.highlight {
+  background: #c7e6f6;
 }
 #lens-manager ul li a {
   font-size:12px;
@@ -46,9 +53,43 @@
   margin-top:4px;
   margin-right:10px;
 }
-##lens-manager span {
+#lens-manager span {
   vertical-align: middle;
 }
-.author-lenses-list li {
-
+#submitted-message {
+  font-size: 14px;
+  color: #3e88ab;
+  border: 1px solid #bde8f0;
+  border-radius: 4px;
+  margin-top: 15px;
+  padding: 20px;
+  line-height: 150%;
+  min-height: 115px;
+}
+#submitted-message p {
+  margin-bottom: 10px;
+}
+#submitted-message a {
+  text-decoration: underline;
+}
+.non-ideal-state-message {
+  font-size: 12px;
+  line-height: 150%;
+  font-style: italic;
+}
+.lens-edit-container {
+  margin-top: 34px;
+}
+.lens-edit-container .non-ideal-state-message {
+  margin-top: 150px;
+  text-align: center;
+  color: #595959;
+  font-style: normal;
+}
+.lens-edit-container .non-ideal-state-message img {
+  width: 64px;
+  margin-bottom: 20px;
+}
+.lens-vis-container {
+  margin-top: 20px;
 }

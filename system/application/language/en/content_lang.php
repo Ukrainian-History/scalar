@@ -52,6 +52,11 @@ $lang['email.new_comment_outro'] = 'The comment is already live, but you can man
 $lang['email.new_comment_outro_moderated'] = '<b>The comment isn\'t live yet.</b> To moderate, log in to your book below and visit the Dashboard\'s Comments tab:';
 $lang['email.new_comment_footer'] = 'Thank you!'."\n\n".'The Scalar Team';
 
+$lang['email.lens_submitted_subject'] = 'New Lens submitted for "%s"';
+$lang['email.lens_submitted_intro'] = 'A new Lens has been submitted for the book "%s":';
+$lang['email.lens_submitted_outro'] = 'To review this submission, head to Manage Lenses and select the Lens from the list under Submitted Lenses.';
+$lang['email.lens_submitted_footer'] = 'Thank you!'."\n\n".'The Scalar Team';
+
 //EOF
 
 ?>

@@ -293,8 +293,8 @@ function wrapOrphanParagraphs(selection) {
 	  	$(this).contents().each(function() {
   			// unwrap inline media links and set them to full size if not already specified
   			$(this).find( '.inline' ).each( function() {
-	          	// remove inline links from wrapper while maintaining position relative to siblings
-	         	if(!$(this).hasClass('wrap')){
+      	// remove inline links from wrapper while maintaining position relative to siblings
+       	if(!$(this).hasClass('wrap') || $(this).attr('data-size') == 'full') {
 					pullOutElement($(this));
 				}
 				if ( $( this ).attr( 'data-size' ) == null ) {
@@ -478,7 +478,7 @@ $.fn.slotmanager_create_slot = function(width, height, options) {
 	$tag.data('slot').html( $tag.data('mediaelement').getEmbedObject() );
 	$tag.data('mediaelement').model.element.addClass('caption_font');
 
-	if($tag.hasClass('wrap')){
+	if($tag.hasClass('wrap') && $tag.attr('data-size') != 'full'){
 		$tag.data('slot').addClass('wrapped_slot');
 		var align = $tag.data('align');
 		if(undefined == align){
@@ -609,19 +609,19 @@ $(window).ready(function() {
 		  }},
 
 		  {load: [widgets_uri+'/spinner/spin.min.js',
-		          widgets_uri+'/d3/d3.v5.min.js'], complete:function() {
+        widgets_uri+'/d3/d3.v5.min.js'], complete:function() {
 
-		        var currentNode = scalarapi.model.getCurrentPageNode();
-		        var extension = scalarapi.getFileExtension( window.location.href );
+        var currentNode = scalarapi.model.getCurrentPageNode();
+        var extension = scalarapi.getFileExtension( window.location.href );
 
-		   		if ( currentNode == null || currentNode.current == null) {
-		   			if ( extension != 'edit' && $('span[property="sioc:content"]').is(':empty')) {
-		   				$( 'body' ).append( '<div id="centered-message"><span>This page contains no content.</span> <span>Click the <img src="' + modules_uri + '/cantaloupe/images/edit_icon.png" alt="Edit button. Click to edit the current page or media." width="30" height="30" /> button above to add some.</span></div>' );
-		   			}
-		   		}
+	   		if ( currentNode == null || currentNode.current == null) {
+	   			if ( extension != 'edit' && $('span[property="sioc:content"]').is(':empty')) {
+	   				$( 'body' ).append( '<div id="centered-message"><span>This page contains no content.</span> <span>Click the <img src="' + modules_uri + '/cantaloupe/images/edit_icon.png" alt="Edit button. Click to edit the current page or media." width="30" height="30" /> button above to add some.</span></div>' );
+	   			}
+	   		}
 
-			  	$('#book-title').parent().wrap('<nav role="navigation"></nav>');
-			  	$('article').before($('#book-title').parent().parent());
+			  $('#book-title').parent().wrap('<nav role="navigation"></nav>');
+			  $('article').before($('#book-title').parent().parent());
 
 				header = $('#book-title').parent().parent().scalarheader( { root_url: modules_uri+'/cantaloupe'} );
 

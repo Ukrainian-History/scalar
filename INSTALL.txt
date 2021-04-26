@@ -123,13 +123,6 @@ Scalar Transfer Tool available in a different repository: https://github.com/Mic
 Simply download the package then place the ZIP's contents into the system/application/plugins/transfer folder.   
 It will then be available to users at Dashboard > Import/Export.  
 
-One last thing: Scalar authors can upload files to your server under Import > Local Media Files (the files are 
-placed in the directory corresponding to their book's URL segment).  We strongly suggest protecting your 
-filesystem against potentially malicious uploads, such as *.php files.  We have a template for this in place in 
-the root folder's .htaccess file.  Edit, uncomment the "malicious file uploads" rewrites, and set appropriate 
-fields to let through requests to system files.  Test by uploading a .php file -- when viewing the file you 
-should see Scalar's 404 in the media player.
-
 Enjoy!
 
 -------------------------------------------------------------------------------------------
@@ -139,11 +132,10 @@ Updates we've made to incorporated libraries, kept here for reference if they ne
 CodeIgniter:
 1) In system/core/Input.php->_clean_input_keys(), change regex "/^[a-z0-9:_\/-]+$/i" to "/^[a-z0-9:_\/\-~@]+$/i"
 
-ARC2 (updated 2019-10-07 from https://github.com/semsol/arc2):
+ARC2 (updated 2021-01-27 from https://github.com/semsol/arc2):
 1) ARC2_Resource.php->getProps(): comment out "if (!isset($this->index[$s])) $this->fetchData($s);"
 2) ARC2_Store.php->hasHashColumn(): look for 'false' rather than 'null' from fetchRow() to keep the id2val table in check
 3) ARC2_StoreLoadQueryHandler.php->getStoredTermID(): replace "if (false !== empty($binaryValue))" with "if (1)" to keep the id2val table in check
-4) vendor/composer/joshcam/mysqli-database/MysqliDb.php->replacePlaceHolders(): supress warnings on "$val = $vals[$i++];" with "=@"
 
 Template (libraries/Template.php):
 1) Added add_meta() and supporting updates to regions arrays

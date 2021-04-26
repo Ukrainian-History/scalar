@@ -276,18 +276,6 @@ function ScalarAPI() {
 				'Android': {extensions:['dzi'], format:'DZI', player:'OpenSeadragon', specifiesDimensions:false},
 				'Other': {extensions:['dzi'], format:'DZI', player:'OpenSeadragon', specifiesDimensions:false}
 			}},
-		'FlashVideo': {
-			name:'FlashVideo',
-			extensions:['flv'],
-			isProprietary:false,
-			contentType:'video',
-			browserSupport: {
-				'Mozilla': {extensions:['flv'], format:'Flash Video', player:'Flash', specifiesDimensions:false},
-				'Explorer': {extensions:['flv'], format:'Flash Video', player:'Flash', specifiesDimensions:false},
-				'Safari': {extensions:['flv'], format:'Flash Video', player:'Flash', specifiesDimensions:false},
-				'Chrome': {extensions:['flv'], format:'Flash Video', player:'Flash', specifiesDimensions:false},
-				'Other': {extensions:['flv'], format:'Flash Video', player:'Flash', specifiesDimensions:false}
-			}},
 		'GIF': {
 			name:'GIF',
 			extensions:['gif'],
@@ -341,19 +329,19 @@ function ScalarAPI() {
 				'Chrome': {extensions:[], format:'HyperCities Collection', player:'proprietary', specifiesDimensions:false},
 				'Other': {extensions:[], format:'HyperCities Collection', player:'proprietary', specifiesDimensions:false}
 			}},
-                'IIIF': {
-                    name: 'IIIF',
-                    extensions: [],
-                    isProprietary:false,
-                    contentType:'manifest',
-                    browserSupport: {
-                        'Mozilla': {extensions:[], format:'Manifest', player:'Mirador', specifiesDimensions:false},
-			'Explorer': {extensions:[], format:'Manifest', player:'Mirador', specifiesDimensions:false},
-			'MobileSafari': {extensions:[], format:'Manifest', player:'Mirador', specifiesDimensions:false},
-			'Safari': {extensions:[], format:'Manifest', player:'Mirador', specifiesDimensions:false},
-			'Chrome': {extensions:[], format:'Manifest', player:'Mirador', specifiesDimensions:false},
-			'Android': {extensions:[], format:'Manifest', player:'Mirador', specifiesDimensions:false},
-			'Other': {extensions:[], format:'Manifest', player:'Mirador', specifiesDimensions:false}
+    'IIIF': {
+      name: 'IIIF',
+      extensions: [],
+      isProprietary:false,
+      contentType:'manifest',
+      browserSupport: {
+        'Mozilla': {extensions:[], format:'Manifest', player:'Mirador', specifiesDimensions:false},
+  			'Explorer': {extensions:[], format:'Manifest', player:'Mirador', specifiesDimensions:false},
+  			'MobileSafari': {extensions:[], format:'Manifest', player:'Mirador', specifiesDimensions:false},
+  			'Safari': {extensions:[], format:'Manifest', player:'Mirador', specifiesDimensions:false},
+  			'Chrome': {extensions:[], format:'Manifest', player:'Mirador', specifiesDimensions:false},
+  			'Android': {extensions:[], format:'Manifest', player:'Mirador', specifiesDimensions:false},
+  			'Other': {extensions:[], format:'Manifest', player:'Mirador', specifiesDimensions:false}
 			}},
 		'JPEG': {
 			name:'JPEG',
@@ -621,17 +609,17 @@ function ScalarAPI() {
 			}},
 		'Vimeo': {
 			name:'Vimeo',
-			extensions:['flv'],
+			extensions:['mp4'],
 			isProprietary:true,
 			contentType:'video',
 			browserSupport: {
-				'Mozilla': {extensions:['flv'], format:'Flash Video', player:'proprietary', specifiesDimensions:false},
-				'Explorer': {extensions:['flv'], format:'Flash Video', player:'proprietary', specifiesDimensions:false},
+				'Mozilla': {extensions:['mp4'], format:'MPEG-4', player:'proprietary', specifiesDimensions:false},
+				'Explorer': {extensions:['mp4'], format:'MPEG-4', player:'proprietary', specifiesDimensions:false},
 				'MobileSafari': {extensions:['mp4'], format:'MPEG-4', player:'proprietary', specifiesDimensions:false},
 				'Safari': {extensions:['mp4'], format:'MPEG-4', player:'proprietary', specifiesDimensions:false},
-				'Chrome': {extensions:['flv'], format:'Flash Video', player:'proprietary', specifiesDimensions:false},
-				'Android': {extensions:['flv'], format:'Flash Video', player:'proprietary', specifiesDimensions:false},
-				'Other': {extensions:['flv'], format:'Flash Video', player:'proprietary', specifiesDimensions:false}
+				'Chrome': {extensions:['mp4'], format:'MPEG-4', player:'proprietary', specifiesDimensions:false},
+				'Android': {extensions:['mp4'], format:'MPEG-4', player:'proprietary', specifiesDimensions:false},
+				'Other': {extensions:['mp4'], format:'MPEG-4', player:'proprietary', specifiesDimensions:false}
 			}},
 		'WAV': {
 			name:'WAV',
@@ -659,17 +647,17 @@ function ScalarAPI() {
 			}},
 		'YouTube': {
 			name:'YouTube',
-			extensions:['flv'],
+			extensions:['mp4'],
 			isProprietary:true,
 			contentType:'video',
 			browserSupport: {
-				'Mozilla': {extensions:['flv'], format:'Flash Video', player:'proprietary', specifiesDimensions:false},
-				'Explorer': {extensions:['flv'], format:'Flash Video', player:'proprietary', specifiesDimensions:false},
+				'Mozilla': {extensions:['mp4'], format:'MPEG-4', player:'proprietary', specifiesDimensions:false},
+				'Explorer': {extensions:['mp4'], format:'MPEG-4', player:'proprietary', specifiesDimensions:false},
 				'MobileSafari': {extensions:['mp4'], format:'MPEG-4', player:'proprietary', specifiesDimensions:false},
 				'Safari': {extensions:['mp4'], format:'MPEG-4', player:'proprietary', specifiesDimensions:false},
-				'Chrome': {extensions:['flv'], format:'Flash Video', player:'proprietary', specifiesDimensions:false},
-				'Android': {extensions:['flv'], format:'Flash Video', player:'proprietary', specifiesDimensions:false},
-				'Other': {extensions:['flv'], format:'Flash Video', player:'proprietary', specifiesDimensions:false}
+				'Chrome': {extensions:['mp4'], format:'MPEG-4', player:'proprietary', specifiesDimensions:false},
+				'Android': {extensions:['mp4'], format:'MPEG-4', player:'proprietary', specifiesDimensions:false},
+				'Other': {extensions:['mp4'], format:'MPEG-4', player:'proprietary', specifiesDimensions:false}
 			}}
 	}
 
@@ -1183,145 +1171,197 @@ ScalarAPI.prototype.decimalSecondsToHMMSS = function(seconds, showMilliseconds) 
 	//return h + 'h ' + mString + 'm ' + sString + 's';
 }
 
+ScalarAPI.prototype.toNS = function(uri) {
+  for (var prefix in scalarapi.model.namespaces) {
+    if (scalarapi.model.namespaces[prefix] == uri.substr(0,scalarapi.model.namespaces[prefix].length)) {
+      return uri.replace(scalarapi.model.namespaces[prefix], prefix+':');
+    }
+  }
+  return false;
+};
+
 /**
  * saveManyRelations, queueManyRelations, runManyRelations
  * A basic Ajax queue for saving relationships, as the save API presently saves one relationship at a time
+ * Can handle data as HTML form fields or as values
  */
 ScalarAPI.prototype.saveManyRelations = function(data, completeCallback, stepCallback) {
-  console.log('saveManyRelations',data);
 
+  // figure out if we're dealing with form field data or regular values
 	var self = this;
-
-	// Queue container_of
-	$(data['container_of']).each(function(indexInArray) {
-		self.queueManyRelations({
-			action:data['action'],'native':data['native'],'id':data['id'],api_key:data['api_key'],
-			'scalar:urn':data['scalar:urn'],
-			'scalar:child_urn':$(this).val(),
-			'scalar:child_rel':'contained',
-			'scalar:sort_number':(indexInArray+1)
-		});
-	});
-	// Queue reply_of
-	$(data['reply_of']).each(function(indexInArray) {
-		self.queueManyRelations({
-			action:data['action'],'native':data['native'],'id':data['id'],api_key:data['api_key'],
-			'scalar:urn':data['scalar:urn'],
-			'scalar:child_urn':$(this).val(),
-			'scalar:child_rel':'replied',
-			'scalar:paragraph_num':$(data['reply_of_paragraph_num'][indexInArray]).val(),
-			'scalar:datetime':$(data['reply_of_datetime'][indexInArray]).val()
-		});
-	});
-	// Queue annotation_of
-	$(data['annotation_of']).each(function(indexInArray) {
-    let relations = {
-			action:data['action'],'native':data['native'],'id':data['id'],api_key:data['api_key'],
-			'scalar:urn':data['scalar:urn'],
-			'scalar:child_urn':$(this).val(),
-			'scalar:child_rel':'annotated',
-			'scalar:start_seconds':$(data['annotation_of_start_seconds'][indexInArray]).val(),
-			'scalar:end_seconds':$(data['annotation_of_end_seconds'][indexInArray]).val(),
-			'scalar:start_line_num':$(data['annotation_of_start_line_num'][indexInArray]).val(),
-			'scalar:end_line_num':$(data['annotation_of_end_line_num'][indexInArray]).val(),
-			'scalar:points':$(data['annotation_of_points'][indexInArray]).val(),
-		}
-    if (data['annotation_of_position_3d']) {
-      data['scalar:position_3d'] = $(data['annotation_of_position_3d'][indexInArray]).val()
+  var isFormData = false;
+  for (var key in data) {
+    if (data.hasOwnProperty(key)) {
+      let array;
+      if (data[key].toArray) { // if it's a jQuery set, convert it to an array
+        array = data[key].toArray();
+      } else if (Array.isArray(data[key])){
+        array = data[key];
+      }
+      if (array) {
+        if (array.length > 0) {
+          if (array[0].toArray) { // if it's an array of jQuery sets, convert the first one to an array
+            array = array[0].toArray();
+          }
+          if (array.length > 0) {
+            if (array[0] instanceof Element) {
+              isFormData = true;
+              break;
+            }
+          }
+        }
+      }
     }
-		self.queueManyRelations(relations);
-	});
-	// Queue tag_of
-	$(data['tag_of']).each(function() {
-		self.queueManyRelations({
-			action:data['action'],'native':data['native'],'id':data['id'],api_key:data['api_key'],
-			'scalar:urn':data['scalar:urn'],
-			'scalar:child_urn':$(this).val(),
-			'scalar:child_rel':'tagged'
-		});
-	});
-	// Queue lens_of
-	$(data['lens_of']).each(function() {
-		self.queueManyRelations({
-			action:data['action'],'native':data['native'],'id':data['id'],api_key:data['api_key'],
-			'scalar:urn':data['scalar:urn'],
-			'scalar:contents':$(this).val(),
-			'scalar:child_rel':'grouped'
-		});
-	});
-	// Queue references
-	$(data['references']).each(function() {
-		self.queueManyRelations({
-			action:data['action'],'native':data['native'],'id':data['id'],api_key:data['api_key'],
-			'scalar:urn':data['scalar:urn'],
-			'scalar:child_urn':$(this).val(),
-			'scalar:child_rel':'referenced',
-			'scalar:reference_text':'', /* todo */
-		});
-	});
+  }
 
-	// Queue has_container
-	$(data['has_container']).each(function(indexInArray) {
-		self.queueManyRelations({
-			action:data['action'],'native':data['native'],'id':data['id'],api_key:data['api_key'],
-			'scalar:urn':$(this).val(),
-			'scalar:child_urn':data['scalar:urn'],
-			'scalar:child_rel':'contained',
-			'scalar:sort_number':$(data['has_container_sort_number'][indexInArray]).val()
-		});
-	});
-	// Queue has_reply
-	$(data['has_reply']).each(function(indexInArray) {
-		self.queueManyRelations({
-			action:data['action'],'native':data['native'],'id':data['id'],api_key:data['api_key'],
-			'scalar:urn':$(this).val(),
-			'scalar:child_urn':data['scalar:urn'],
-			'scalar:child_rel':'replied',
-			'scalar:paragraph_num':$(data['has_reply_paragraph_num'][indexInArray]).val(),
-			'scalar:datetime':$(data['has_reply_datetime'][indexInArray]).val()
-		});
-	});
-	// Queue has_annotation
-	$(data['has_annotation']).each(function(indexInArray) {
-		self.queueManyRelations({
-			action:data['action'],'native':data['native'],'id':data['id'],api_key:data['api_key'],
-			'scalar:urn':$(this).val(),
-			'scalar:child_urn':data['scalar:urn'],
-			'scalar:child_rel':'annotated',
-			'scalar:start_seconds':$(data['has_annotation_start_seconds'][indexInArray]).val(),
-			'scalar:end_seconds':$(data['has_annotation_end_seconds'][indexInArray]).val(),
-			'scalar:start_line_num':$(data['has_annotation_start_line_num'][indexInArray]).val(),
-			'scalar:end_line_num':$(data['has_annotation_end_line_num'][indexInArray]).val(),
-			'scalar:points':$(data['has_annotation_points'][indexInArray]).val(),
-			'scalar:position_3d':$(data['has_annotation_position_3d'][indexInArray]).val()
-		});
-	});
-	// Queue has_tag
-	$(data['has_tag']).each(function() {
-		self.queueManyRelations({
-			action:data['action'],'native':data['native'],'id':data['id'],api_key:data['api_key'],
-			'scalar:urn':$(this).val(),
-			'scalar:child_urn':data['scalar:urn'],
-			'scalar:child_rel':'tagged'
-		});
-	});
-	// Queue has_reference
-	$(data['has_reference']).each(function() {
-		self.queueManyRelations({
-			action:data['action'],'native':data['native'],'id':data['id'],api_key:data['api_key'],
-			'scalar:urn':$(this).val(),
-			'scalar:child_urn':data['scalar:urn'],
-			'scalar:child_rel':'referenced',
-			'scalar:reference_text':'' /* todo */
-		});
-	});
+  // assemble the relation data
+  this.queueRelationsFromDataByType(data, ['path', 'comment', 'annotation', 'tag', 'lens', 'reference'], true, isFormData);
+  this.queueRelationsFromDataByType(data, ['path', 'comment', 'annotation', 'tag', 'reference'], false, isFormData);
 
 	ScalarAPI.prototype.runManyRelations.count = 0;
 	ScalarAPI.prototype.runManyRelations.total = null;
-
 	self.runManyRelations(completeCallback, stepCallback);
-
 }
+
+/**
+ * @private
+ */
+ScalarAPI.prototype.queueRelationsFromDataByType = function(data, types, isOutgoing, isFormData) {
+  let relProperty;
+  types.forEach(relType => {
+
+    // get the right relationship based on directionality
+    if (isOutgoing) {
+      relProperty = this.model.relationTypes[relType].outgoingRel;
+    } else {
+      relProperty = this.model.relationTypes[relType].incomingRel;
+    }
+
+    if (data[relProperty]) {
+      let urns;
+      let relationData = [];
+
+      // use jQuery to assemble base data if we're dealing with form fields
+      if (isFormData) {
+        $(data[relProperty]).each((index, item) => {
+          if (isOutgoing) {
+            urns = {urn: data['scalar:urn'], childUrn: $(item).val()};
+          } else {
+            urns = {urn: $(item).val(), childUrn: data['scalar:urn']};
+          }
+          relationData.push({data:this.getRelationBaseData(data, relType, urns.urn, urns.childUrn), isOutgoing: isOutgoing});
+        });
+
+      // otherwise use conventional means
+      } else {
+        if (data[relProperty].length > 0) {
+          data[relProperty].forEach((value, index) => {
+            if (isOutgoing) {
+              urns = {urn: data['scalar:urn'], childUrn: value};
+            } else {
+              urns = {urn: value, childUrn: data['scalar:urn']};
+            }
+            relationData.push({data:this.getRelationBaseData(data, relType, urns.urn, urns.childUrn), isOutgoing: isOutgoing});
+          });
+        }
+      }
+
+      // add special case fields depending on the relation type and queue
+      relationData.forEach((relationDatum, index) => {
+        this.addRelationsToBaseData(data, relationDatum.data, index, relationDatum.isOutgoing, isFormData);
+        this.queueManyRelations(relationDatum.data);
+      })
+    }
+  });
+}
+
+/**
+ * Get data that must be part of every relation
+ * @private
+ */
+ ScalarAPI.prototype.getRelationBaseData = function(data, relation, urn, childUrn) {
+   let baseData = {
+     action:data['action'],'native':data['native'],'id':data['id'],api_key:data['api_key'],
+     'scalar:urn':urn,
+     'scalar:child_rel':this.model.relationTypes[relation].childRel
+   }
+   if (relation != 'lens') {
+     baseData['scalar:child_urn'] = childUrn;
+   }
+   return baseData;
+ }
+
+ /**
+  * Add special data specific to each relation type
+  * @private
+  **/
+  ScalarAPI.prototype.addRelationsToBaseData = function(data, baseData, index, isOutgoing, isFormData) {
+    let properties, relationPrefix;
+    switch (baseData['scalar:child_rel']) {
+
+      case 'contained':
+      if (isOutgoing) {
+        baseData['scalar:sort_number'] = index + 1;
+      } else {
+        if (isFormData) {
+          baseData['scalar:sort_number'] = $(data['has_container_sort_number'][index]).val();
+        } else {
+          baseData['scalar:sort_number'] = data['has_container_sort_number'][index];
+        }
+      }
+      break;
+
+      case 'grouped':
+      if (isFormData) {
+        baseData['scalar:contents'] = $(data['lens_of'][index]).val();
+      } else {
+        baseData['scalar:contents'] = data['lens_of'][index];
+      }
+      break;
+
+      case 'replied':
+      properties = ['paragraph_num', 'datetime'];
+      this.addRelationPropertiesToBaseData(data, baseData, 'comment', properties, index, isOutgoing, isFormData);
+      break;
+
+      case 'annotated':
+      properties = ['start_seconds', 'end_seconds', 'start_line_num', 'end_line_num', 'points'];
+      if (data['annotation_of_position_3d'] || data['has_annotation_position_3d']) properties.push('position_3d');
+      this.addRelationPropertiesToBaseData(data, baseData, 'annotation', properties, index, isOutgoing, isFormData);
+      break;
+
+      case 'referenced':
+      baseData['scalar:reference_text'] = ''; /* todo */
+      break;
+
+    }
+  }
+
+/**
+ * Add special properties for a single relation type
+ * @private
+ */
+ ScalarAPI.prototype.addRelationPropertiesToBaseData = function(data, baseData, relation, properties, index, isOutgoing, isFormData) {
+   let prefix;
+
+   // property prefixes change based on directionality
+   if (isOutgoing) {
+     prefix = this.model.relationTypes[relation].outgoingRel;
+   } else {
+     prefix = this.model.relationTypes[relation].incomingRel;
+   }
+
+   // use jQuery to access form field data, otherwise do it conventionally
+   if (isFormData) {
+     properties.forEach(prop => {
+       baseData['scalar:' + prop] = $(data[prefix + '_' + prop][index]).val();
+     });
+   } else {
+     properties.forEach(prop => {
+       baseData['scalar:' + prop] = data[prefix + '_' + prop][index];
+     });
+   }
+ }
 
 /**
  * @private
@@ -1810,7 +1850,7 @@ ScalarAPI.prototype.modifyPageAndRelations = function(baseProperties, pageData, 
 
 /**
  * savePages, queueSavePages, runSavePages
- * A basic Ajax queue for saving pages, as the save API presently saves one page at a time. Note that the name "modify" indicates that these routines will preserve existing content and relationships
+ * A basic Ajax queue for saving pages, as the save API presently saves one page at a time.
  *
  * @param {Array} dataArr					Array of data, each entry represents one call to savePage.
  * @param {Function} completeCallback		Function to be called when the queue finishes running.
@@ -2543,7 +2583,8 @@ function ScalarModel(options) {
 		{property:'audio', uri:'http://scalar.usc.edu/2012/01/scalar-ns#audio', type:'string'},
 		{property:'isLive', uri:'http://scalar.usc.edu/2012/01/scalar-ns#isLive', type:'int'},
 		{property:'paywall', uri:'http://scalar.usc.edu/2012/01/scalar-ns#paywall', type:'string'},
-		{property:'author', uri:'http://www.w3.org/ns/prov#wasAttributedTo', type:'string'}
+    {property:'author', uri:'http://www.w3.org/ns/prov#wasAttributedTo', type:'string'},
+		{property:'wasAttributedTo', uri:'http://www.w3.org/ns/prov#wasAttributedTo', type:'string'}
 	];
 
 	// one-shot properties which can be pulled automatically from version data
@@ -2573,7 +2614,8 @@ function ScalarModel(options) {
 		{property:'isLive', uri:'http://scalar.usc.edu/2012/01/scalar-ns#isLive', type:'int'},
 		{property:'paywall', uri:'http://scalar.usc.edu/2012/01/scalar-ns#paywall', type:'string'},
 		{property:'fullname', uri:'http://scalar.usc.edu/2012/01/scalar-ns#fullname', type:'string'},
-		{property:'author', uri:'http://www.w3.org/ns/prov#wasAttributedTo', type:'string'},
+ 		{property:'author', uri:'http://www.w3.org/ns/prov#wasAttributedTo', type:'string'},
+		{property:'wasAttributedTo', uri:'http://www.w3.org/ns/prov#wasAttributedTo', type:'string'},
 		{property:'references', uri:'http://purl.org/dc/terms/references', type:'string'},
 		{property:'isReferencedBy', uri:'http://purl.org/dc/terms/isReferencedBy', type:'string'},
 		{property:'isLensOf', uri:'http://scalar.usc.edu/2012/01/scalar-ns#isLensOf', type:'json'}
@@ -2581,18 +2623,18 @@ function ScalarModel(options) {
 
 	// metadata about each relation type
 	this.relationTypes = {
-		'tag':{id:'tag', body:'tag', bodyPlural:'tags', target:'item', targetPlural:'items', incoming:'has', outgoing:'tags'},
-		'path':{id:'path', body:'path', bodyPlural:'paths', target:'item', targetPlural:'items', incoming:'contained by', outgoing:'contains'},
-		'reference':{id:'reference', body:'item', bodyPlural:'items', target:'media file', targetPlural:'media files', incoming:'referenced by', outgoing:'references'},
-		'lens':{id:'lens', body:'item', bodyPlural:'items', target:'item', targetPlural:'items', incoming:'lensed by', outgoing:'lens of'},
-		'annotation':{id:'annotation', body:'annotation', bodyPlural:'annotations', target:'item', targetPlural:'items', incoming:'annotated by', outgoing:'annotates'},
-		'comment':{id:'comment', body:'comment', bodyPlural:'comments', target:'item', targetPlural:'items', incoming:'has', outgoing:'is a comment on'},
-		'commentary':{id:'commentary', body:'commentary', bodyPlural:'commentaries', target:'item', targetPlural:'items', incoming:'has', outgoing:'is a commentary on'},
-		'review':{id:'review', body:'review', bodyPlural:'reviews', target:'item', targetPlural:'items', incoming:'has', outgoing:'is a review of'},
-		'author':{id:'author', body:'book', bodyPlural:'books', target:'author', targetPlural:'authors', incoming:'written by', outgoing:'has written'},
-		'commentator':{id:'commentator', body:'book', bodyPlural:'book', target:'commentator', targetPlural:'commentators', incoming:'responded to by', outgoing:'has responded to'},
-		'reviewer':{id:'reviewer', body:'book', bodyPlural:'books', target:'reviewer', targetPlural:'reviewers', incoming:'reviewed by', outgoing:'has reviewed'},
-		'unknown':{id:'unknown', body:'item', bodyPlural:'items', target:'item', targetPlural:'items', incoming:'linked to', outgoing:'linked to'}
+		'tag':{id:'tag', outgoingRel:'tag_of', incomingRel:'has_tag', childRel:'tagged', body:'tag', bodyPlural:'tags', target:'item', targetPlural:'items', incoming:'has', outgoing:'tags'},
+		'path':{id:'path', outgoingRel:'container_of', incomingRel:'has_container', childRel:'contained', body:'path', bodyPlural:'paths', target:'item', targetPlural:'items', incoming:'contained by', outgoing:'contains'},
+		'reference':{id:'reference', outgoingRel:'references', incomingRel:'has_reference', childRel:'referenced', body:'item', bodyPlural:'items', target:'media file', targetPlural:'media files', incoming:'referenced by', outgoing:'references'},
+		'lens':{id:'lens', outgoingRel:'lens_of', incomingRel:null, childRel:'grouped', body:'item', bodyPlural:'items', target:'item', targetPlural:'items', incoming:'lensed by', outgoing:'lens of'},
+		'annotation':{id:'annotation', outgoingRel:'annotation_of', incomingRel:'has_annotation', childRel:'annotated', body:'annotation', bodyPlural:'annotations', target:'item', targetPlural:'items', incoming:'annotated by', outgoing:'annotates'},
+		'comment':{id:'comment', outgoingRel:'reply_of', incomingRel:'has_reply', childRel:'replied', body:'comment', bodyPlural:'comments', target:'item', targetPlural:'items', incoming:'has', outgoing:'is a comment on'},
+		'commentary':{id:'commentary', outgoingRel:null, incomingRel:null, childRel:null, body:'commentary', bodyPlural:'commentaries', target:'item', targetPlural:'items', incoming:'has', outgoing:'is a commentary on'},
+		'review':{id:'review', outgoingRel:null, incomingRel:null, childRel:null, body:'review', bodyPlural:'reviews', target:'item', targetPlural:'items', incoming:'has', outgoing:'is a review of'},
+		'author':{id:'author', outgoingRel:null, incomingRel:null, childRel:null, body:'book', bodyPlural:'books', target:'author', targetPlural:'authors', incoming:'written by', outgoing:'has written'},
+		'commentator':{id:'commentator', outgoingRel:null, incomingRel:null, childRel:null, body:'book', bodyPlural:'book', target:'commentator', targetPlural:'commentators', incoming:'responded to by', outgoing:'has responded to'},
+		'reviewer':{id:'reviewer', outgoingRel:null, incomingRel:null, childRel:null, body:'book', bodyPlural:'books', target:'reviewer', targetPlural:'reviewers', incoming:'reviewed by', outgoing:'has reviewed'},
+		'unknown':{id:'unknown', outgoingRel:null, incomingRel:null, childRel:null, body:'item', bodyPlural:'items', target:'item', targetPlural:'items', incoming:'linked to', outgoing:'linked to'}
 	}
 
 	this.scalarTypes = {
@@ -2618,6 +2660,7 @@ function ScalarModel(options) {
 		'author':{id:'author', singular:'author', plural:'authors'},
 		'commentator':{id:'commentator', singular:'commentator', plural:'commentators'},
 		'reviewer':{id:'reviewer', singular:'reviewer', plural:'reviewers'},
+		'term':{id:'term', singular:'term', plural:'terms'},
 		'other':{id:'other', singular:'file', plural:'files'}
 	}
 
@@ -3056,6 +3099,7 @@ function ScalarNode(url, json, versionData) {
 	this.incomingRelations = [];
 	this.outgoingRelations = [];
 	this.scalarTypes = {};
+	this.sorts = {};
 
 	this.parseData(json, versionData);
 
@@ -3162,6 +3206,14 @@ ScalarNode.prototype.parseData = function(json, versionData) {
 		this.scalarTypes.toc = scalarapi.model.scalarTypes.toc;
 	}
 
+	// if there is incoming data related to sorts, put that into the object
+	this.sorts = {};
+	if ('undefined' != typeof(json.created)) this.sorts.created = json.created;
+	if ('undefined' != typeof(json.relation_type)) this.sorts.relationType = json.relation_type;
+	if ('undefined' != typeof(json.num_relations)) this.sorts.numRelations = json.num_relations;
+	if ('undefined' != typeof(json.string_matches)) this.sorts.stringMatches = json.string_matches;
+	if ('undefined' != typeof(json.visit_date)) this.sorts.visitDate = json.visit_date;
+
 }
 
 /**
@@ -3253,13 +3305,15 @@ ScalarNode.prototype.addRelation = function(relation) {
 		if (this.outgoingRelations.indexOf(relation) == -1) {
 			n = this.outgoingRelations.length;
 			for (i=0; i<n; i++) {
-        if (this.outgoingRelations[i].target == relation.target) {
-          this.outgoingRelations[i] = relation;
-					foundExisting = true;
-        } else if (this.outgoingRelations[i].target && relation.target) {
-          if (this.outgoingRelations[i].target.slug == relation.target.slug) {
+        if (this.outgoingRelations[i].type == relation.type) {
+          if (this.outgoingRelations[i].target == relation.target) {
             this.outgoingRelations[i] = relation;
   					foundExisting = true;
+          } else if (this.outgoingRelations[i].target && relation.target) {
+            if (this.outgoingRelations[i].target.slug == relation.target.slug) {
+              this.outgoingRelations[i] = relation;
+    					foundExisting = true;
+            }
           }
         }
 			}
@@ -3282,13 +3336,15 @@ ScalarNode.prototype.addRelation = function(relation) {
 
 			n = this.incomingRelations.length;
 			for (i=0; i<n; i++) {
-        if (this.incomingRelations[i].body == relation.body) {
-          this.incomingRelations[i] = relation;
-					foundExisting = true;
-        } else if (this.incomingRelations[i].body && relation.body) {
-          if (this.incomingRelations[i].body.slug == relation.body.slug) {
+        if (this.incomingRelations[i].type == relation.type) {
+          if (this.incomingRelations[i].body == relation.body) {
             this.incomingRelations[i] = relation;
   					foundExisting = true;
+          } else if (this.incomingRelations[i].body && relation.body) {
+            if (this.incomingRelations[i].body.slug == relation.body.slug) {
+              this.incomingRelations[i] = relation;
+    					foundExisting = true;
+            }
           }
         }
 			}
@@ -3704,7 +3760,7 @@ ScalarVersion.prototype.parseData = function(data, node) {
 	// populate auxiliary properties
 	var notAuxPropBecauseOfPrefix = function(uri) {
 		var prefixes = ['tk'];
-		var prefix = toNS(uri).split(':')[0];
+		var prefix = scalarapi.toNS(uri).split(':')[0];
 		if (prefixes.indexOf(prefix) != -1) return true;
 		return false;
 	};
@@ -3714,19 +3770,11 @@ ScalarVersion.prototype.parseData = function(data, node) {
 		}
 		return false;
 	};
-	var toNS = function(uri) {
-		for (var prefix in scalarapi.model.namespaces) {
-			if (scalarapi.model.namespaces[prefix] == uri.substr(0,scalarapi.model.namespaces[prefix].length)) {
-				return uri.replace(scalarapi.model.namespaces[prefix], prefix+':');
-			}
-		}
-		return false;
-	};
 	for (var p in data.json) {
-		if (isVersionProperty(p) || !toNS(p) || notAuxPropBecauseOfPrefix(p)) continue;
-		if (this.auxProperties[toNS(p)] == null) this.auxProperties[toNS(p)] = [];
+		if (isVersionProperty(p) || !scalarapi.toNS(p) || notAuxPropBecauseOfPrefix(p)) continue;
+		if (this.auxProperties[scalarapi.toNS(p)] == null) this.auxProperties[scalarapi.toNS(p)] = [];
 		for (j = 0; j < data.json[p].length; j++) {
-			this.auxProperties[toNS(p)].push(data.json[p][j].value);
+			this.auxProperties[scalarapi.toNS(p)].push(data.json[p][j].value);
 		}
 	}
 

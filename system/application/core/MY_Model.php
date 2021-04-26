@@ -76,7 +76,7 @@ class MY_Model extends CI_Model {
     	if (empty($sq)) $sq = null;
     	if (empty($id_array)) $id_array= null;
 
-    	// Get annotations that connect to the current book
+    	// Get content from the relational tables that connect to the current book
     	$this->db->distinct();
     	$this->db->select($this->pages_table.'.*');
     	$this->db->select($this->pages_table.'.content_id AS parent_content_id');
@@ -101,7 +101,7 @@ class MY_Model extends CI_Model {
 			$content[$row->parent_content_id][] = $row;
 		}
 
-		// Remove if isn't the most recent version
+		// Remove if parent isn't the most recent version
 		if (empty($id_array)) {
 			$remove = array();
 			foreach ($content as $content_id => $row) {
@@ -209,6 +209,7 @@ class MY_Model extends CI_Model {
 		if (!empty($is_live)) $this->db->where($this->pages_table.'.is_live', 1);
 		$this->db->order_by($orderby, $orderdir);
 		$query = $this->db->get();
+		if ($this->db->_error_message()) echo 'Database error: '.$this->db->_error_message();
 		$result = $query->result();
 		$remove = array();
     	for ($j = 0; $j < count($result); $j++) {

@@ -109,7 +109,7 @@ class Book extends MY_Controller {
 			if ('login_status'==$this->data['url_params']['page_first_segment']) return $this->login_status();  // Ajax login check
 			// Load page based on slug
 			$page = $this->pages->get_by_slug($this->data['book']->book_id, $this->data['slug']);
-			if ($page && !$page->is_live) $this->protect_book('Reader');
+			if ($page && !$page->is_live) $this->protect_book('Reader', $page->user);
 			$page_not_found = false;
 			$this->data['tklabels'] = $this->tklabels();
 			if (!empty($page)) {
@@ -119,7 +119,7 @@ class Book extends MY_Controller {
 					if (!empty($version) && null == $this->data['use_versions']) $this->data['use_versions'] = array();
 					if (!empty($version)) $this->data['use_versions'][$page->content_id] = $version->version_id;
 				}
-				// Build (hierarchical) RDF object for the page's version(s)
+				// Build (hierarchical) RDF object for the page's most recent version
 				$settings = array(
 								 	'book'         => $this->data['book'],
 									'content'      => $page,
@@ -323,6 +323,110 @@ class Book extends MY_Controller {
 		exit;
 
 	}
+	
+	// Save new, hidden Lens pages based on a logged-in-user's ID
+	// This is a special case; we didn't want to corrupt the security of the Save API and its native (session) vs non-native (api_key) authentication
+	private function save_lens_page_by_user_id() {
+		
+		header('Content-type: application/json');
+		$return = array();
+		$this->load->model('lens_model', 'lenses');
+		
+		try {
+			
+			// TODO: throttle to five per session
+			
+			// Either logged in or not
+			$action      =@ trim($_POST['action']);
+			$title       =@ trim($_POST['dcterms:title']);
+			$description =@ trim($_POST['dcterms:description']);
+			$content     =@ trim($_POST['sioc:content']);
+			$lens 		 =@ trim($_POST['contents']);
+			$user_id     =@ (int) trim($_POST['user']);
+			
+			if (empty($action)) throw new Exception('Action is a required field');
+			if (empty($title)) throw new Exception('Lens title is a required field');
+			if (empty($lens)) throw new Exception('Lens content is a required field');
+			if (empty($user_id)) throw new Exception('User is a required field');
+			
+			$user = $this->users->get_by_user_id($user_id);
+			if (!$user) throw new Exception('Could not find user');
+			if ($user->user_id != $this->data['login']->user_id) throw new Exception('Could not match your user ID with your login session.  You could be logged out.');
+			$fullname = $user->fullname;
+			if (empty($fullname)) throw new Exception('Logged in user does not have a name');
+			
+			if ('add' == $action) {
+				
+				// Save page
+				$save = array();
+				$save['book_id'] = $this->data['book']->book_id;
+				$save['user_id'] = $user_id;
+				$save['title'] = $title;    // for creating slug
+				$save['type'] = 'composite';
+				$save['is_live'] = 0;
+				$content_id = $this->pages->create($save);
+				if (empty($content_id)) throw new Exception('Could not save the new content');
+				
+				// Save version
+				$save = array();
+				$save['user_id'] = $user_id;
+				$save['title'] = $title;
+				$save['description'] = $description;
+				$save['content'] = $content;
+				$save['attribution'] = $this->versions->build_attribution($fullname, $this->input->server('REMOTE_ADDR'));
+				$version_id = $this->versions->create($content_id, $save);
+				if (empty($version_id)) throw new Exception('Could not save the new version');  // TODO: delete prev made content
+				
+				// Save relation
+				if (!$this->lenses->save_children($version_id, array($lens))) throw new Exception('Could not save relation');
+				
+				$_content = $this->pages->get($content_id);
+				$return['slug'] = $_content->slug;
+				$return['urn'] = $this->versions->urn($version_id);
+				
+			} elseif ('update' == $action) {
+				
+				// Version ID
+				$version_urn =@ trim($_POST['scalar:urn']);
+				if (empty($version_urn)) throw new Exception('scalar:urn is a required field');
+				$arr = explode(':', $version_urn);
+				$version_id = (int) array_pop($arr);
+				$version = $this->versions->get($version_id, null, false);
+				if (empty($version)) throw new Exception('Could not find version');
+				
+				// Content_id
+				$content_id = (int) $version->content_id;
+				$_content = $this->pages->get($content_id);
+				if (empty($_content)) throw new Exception('Could not find content');
+				if ($_content->user != $user_id) throw new Exception('Only the creator of the page can edit the page');
+				$return['slug'] = $_content->slug;
+				
+				// Save version
+				$save = array();
+				$save['user_id'] = $user_id;
+				$save['title'] = $title;
+				$save['description'] = $description;
+				$save['content'] = $content;
+				$save['attribution'] = $this->versions->build_attribution($fullname, $this->input->server('REMOTE_ADDR'));
+				$version_id = $this->versions->create($content_id, $save);
+				if (empty($version_id)) throw new Exception('Could not save the new version');  // TODO: delete prev made content
+				$return['urn'] = $this->versions->urn($version_id);
+				
+				// Save Lens relation
+				if (!$this->lenses->save_children($version_id, array($lens))) throw new Exception('Could not save relation');
+				
+			} else {
+				throw new Exception('Invalid action');
+			}
+			
+		} catch (Exception $e) {
+			$return['error'] =  $e->getMessage();
+		}
+		
+		echo json_encode($return);
+		exit;
+		
+	}
 
 	// Tags (list all tags in cloud)
 	private function tags() {
@@ -394,7 +498,7 @@ class Book extends MY_Controller {
 		$this->data['prev'] = (@!empty($_GET['prev'])) ? $_GET['prev'] : null;
 
 		// Check to make sure URLs have a valid host
-		if ((filter_var($this->data['prev'],FILTER_VALIDATE_URL,FILTER_FLAG_HOST_REQUIRED) === FALSE) || (filter_var($this->data['link'],FILTER_VALIDATE_URL,FILTER_FLAG_HOST_REQUIRED) === FALSE)) {
+		if ((filter_var($this->data['prev'],FILTER_VALIDATE_URL) === FALSE) || (filter_var($this->data['link'],FILTER_VALIDATE_URL) === FALSE)) {
 			$this->kickout();
 		}
 
@@ -894,7 +998,7 @@ class Book extends MY_Controller {
 
 	}
 
-	private function lenses() {
+	private function manage_lenses() {
 		$this->data['view'] = __FUNCTION__;
 	}
 

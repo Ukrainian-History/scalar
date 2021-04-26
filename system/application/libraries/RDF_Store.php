@@ -124,7 +124,7 @@ class RDF_Store {
      * Look for versions that match the predicate and a search on the object
      */
     
-    public function get_urns_from_predicate_and_object($p_arr=array(), $o='', $in_version_urns=array()) {
+    public function get_urns_from_predicate_and_object($p_arr=array(), $o='', $in_version_urns=array(), $exact_match=false) {
     	
     	if (!is_array($p_arr)) $p_arr= array($p_arr);
     	for ($j = 0; $j < count($p_arr); $j++) {
@@ -152,12 +152,22 @@ class RDF_Store {
     	$q .= '
                FILTER ('.implode(' || ',$list).') . ';
     	$q .= '
-               FILTER (regex (?o,"'.$o.'","i")) . ';  // TODO: match word, exclude word within word
+               FILTER (regex (?o,"'.$o.'","i")) . ';  // this is 'contains' but not 'exact match'
     	$q .= '
               }';
     	
     	$rows = $this->store->query($q, 'rows');
     	if (!is_array($rows)) return false;
+    	
+    	if ($exact_match) {
+    		for ($j = count($rows)-1; $j >= 0; $j--) {
+    			$string = ' '.preg_replace("/[^\w\s]/", " ", strtolower($rows[$j]['o'])).' ';
+    			//$arr = explode(' ', $string);
+    			//if (!in_array($o, $arr)) unset($rows[$j]);
+    			if (!strstr($string, ' '.strtolower(trim($o)).' ')) unset($rows[$j]);
+    		}
+    	}
+    	
     	$return = array();
     	foreach ($rows as $row) {
     		$return[] = $row['s'];
