@@ -269,6 +269,7 @@ getPropertyValue:function(a){return this[a]||""},item:function(){},removePropert
                                                             '<li class="vis_link" data-vistype="vistag"><a role="menuitem"><span class="menuIcon" id="tagIcon"></span> Tag</a></li>'+
                                                         '</ul>'+
                                                     '</li>'+
+			/*
                                                     '<li id="scalar_menu" class="dropdown">'+
                                                         '<a role="menuitem" aria-expanded="false"><span class="menuIcon rightArrowIcon pull-right"></span><span class="menuIcon" id="scalarIcon"></span>Scalar</a>'+
                                                         '<ul class="dropdown-menu" role="menu">'+
@@ -277,6 +278,7 @@ getPropertyValue:function(a){return this[a]||""},item:function(){},removePropert
                                                             '<li><a role="menuitem" href="'+base.get_param(index_url)+'">More Scalar Projects</a></li>'+
                                                         '</ul>'+
                                                     '</li>'+
+			*/
                                                 '</ul>'+
                                             '</li>'+
                                         '</ul>'+
