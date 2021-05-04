@@ -926,7 +926,7 @@
             if (node.current.description != null) {
             	markup += '<p class="description-sm">' + node.current.description + '</p>';
             }
-            markup += '<a href="' + node.url + '" class="goThereLink btn btn-default" role="button">Go there &raquo;</a><span class="clearfix"></span></div><span class="clearfix"></span>' +
+            markup += '<a href="' + node.url + '" class="goThereLink btn btn-default" role="button">View &raquo;</a><span class="clearfix"></span></div><span class="clearfix"></span>' +
             		'</div>' +
             	'</div></div>';
             $target.append(markup);
