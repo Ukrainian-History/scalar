@@ -1196,7 +1196,7 @@
                 var currentPageNode = scalarapi.model.getCurrentPageNode();
                 var comments = currentPageNode.getRelatedNodes('comment', 'incoming');
                 //$('article').append('<div id="footer"><div id="comment" class="reply_link">'+((comments.length > 0) ? comments.length : '&nbsp;')+'</div><div id="footer-right"></div></div>');
-                $('#footer').before('<div id="incoming_comments" class="caption_font"><div id="comment_control" class="reply_link"><strong>' + ((comments.length > 0) ? comments.length : '&nbsp;') + '</strong></div></div>');
+                //$('#footer').before('<div id="incoming_comments" class="caption_font"><div id="comment_control" class="reply_link"><strong>' + ((comments.length > 0) ? comments.length : '&nbsp;') + '</strong></div></div>');
                 var commentDialogElement = $('<div></div>').appendTo('body');
                 commentDialog = commentDialogElement.scalarcomments({ root_url: modules_uri + '/cantaloupe' });
                 $('.reply_link').on('click', function() {
