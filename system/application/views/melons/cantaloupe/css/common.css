@@ -49,7 +49,7 @@ sup {
 	vertical-align: super;
 	font-size: smaller;
 }
-hr { clear:both; border: 0; border-bottom: 1px solid #ccc; }
+hr { clear:both; border: 0; }
 
 .hanging-indent { padding-left: 22px; text-indent: -22px; }
 
