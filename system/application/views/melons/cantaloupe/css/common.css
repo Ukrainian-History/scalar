@@ -1949,3 +1949,7 @@ span.base {
 	padding:6px 12px;
 	max-width:138px;
 }
+
+.body_copy a {
+	text-decoration: underline;
+}
