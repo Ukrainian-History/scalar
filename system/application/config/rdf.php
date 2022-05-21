@@ -58,6 +58,7 @@ $config['internet_archive']['filetypes'] = array(
 $config['rdf_fields'] = array(
 		'type' => 					'rdf:type',
 		'homepage' =>				'foaf:homepage',
+		'mbox' =>					'foaf:mbox',
 		'mbox_sha1sum' =>			'foaf:mbox_sha1sum',
 		'user' => 					'prov:wasAttributedTo',
 		'fullname' =>				'foaf:name',
@@ -180,6 +181,7 @@ $config['ontologies']['art'] = array(
 			'objectId',
 			'thumbnail',
 			'topic',
+      'url',
 			'resolution',
 			'serverurl',
 			'sourceLocation',

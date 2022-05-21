@@ -34,12 +34,15 @@ class User_model extends MY_Model {
 
     }
 
-  	public function rdf($row, $prefix='') {
+  	public function rdf($row, $prefix='', $can_show_email=false) {
 
   		$row->type = 'http://xmlns.com/foaf/0.1/Person';
 		if (isset($row->url) && !isset($row->homepage)) {
 			$row->homepage = $row->url;
 			unset($row->url);
+		}
+		if ($can_show_email && isset($row->email) && !isset($row->mbox)) {
+			$row->mbox = $row->email;
 		}
 		if (isset($row->email) && !isset($row->mbox_sha1sum)) {
 			$row->mbox_sha1sum = sha1('mailto:'.$row->email);
@@ -474,6 +477,7 @@ class User_model extends MY_Model {
     	
 		$data = array('fullname' => $fullname, 'email' => $email);
 		$this->db->insert($this->users_table, $data);
+		if ($this->db->_error_message()) echo 'Database error: '.$this->db->_error_message();
 		$user_id = $this->db->insert_id();
 		$user = $this->get_by_user_id($user_id);
 		

@@ -8,6 +8,7 @@
 
     function ScalarLenses(element, options) {
         this.element = element;
+        $(this.element).data('lensEditor', this);
         this.options = $.extend( {}, defaults, options);
         this._defaults = defaults;
         this._name = pluginName;
@@ -18,6 +19,7 @@
     ScalarLenses.prototype.init = function (){
 
       this.papaParseIsLoaded = false;
+      this.maxLenses = 5;
 
       this.visualizationOptions = {
         'force-directed': {
@@ -52,14 +54,14 @@
       };
 
       this.ontologyOptions = {
-        "dcterms":"Dublin Core",
-        "art":"Artstor",
+        "dcterms":"Dublin Core (dcterms)",
+        "art":"Artstor (art)",
         "iptc":"IPTC",
         "bibo":"BIBO",
         "id3":"ID3",
-        "dwc":"Darwin Core",
-        "vra":"VRA Ontology",
-        "cp":"Common Place",
+        "dwc":"Darwin Core (dwc)",
+        "vra":"VRA Ontology (vra)",
+        "cp":"Common Place (cp)",
         "gpano": "gpano",
         "scalar": "Scalar",
         "sioc": "SIOC",
@@ -72,7 +74,7 @@
         'tag': {'parent': 'tag', 'child': 'tagged by', 'any-relationship':'tag or are tagged by'},
         'annotation': {'parent': 'annotate', 'child': 'annotated by', 'any-relationship':'annotate or are annotated by'},
         'reference': {'parent': 'reference', 'child': 'referenced by', 'any-relationship':'reference or are referenced by'},
-        'comment': {'parent': 'comment on', 'child': 'commented on by', 'any-relationship':'comment on or are commented on by'}
+        'reply': {'parent': 'comment on', 'child': 'commented on by', 'any-relationship':'comment on or are commented on by'}
       };
 
       this.inclusivePluralRelationshipDescriptors = { // describe the related items as added to an existing plural set
@@ -81,7 +83,7 @@
         'tag': {'parent': 'and their tags', 'child': 'and the items they tag', 'any-relationship':'and their tag relations'},
         'annotation': {'parent': 'and their annotations', 'child': 'and the items they annotate', 'any-relationship':'and their annotation relations'},
         'reference': {'parent': 'and their referencers', 'child': 'and the media they reference', 'any-relationship':'and their media relations'},
-        'comment': {'parent': 'and their comments', 'child': 'and the items they comment on', 'any-relationship':'and their comment relations'}
+        'reply': {'parent': 'and their comments', 'child': 'and the items they comment on', 'any-relationship':'and their comment relations'}
       };
 
       this.inclusiveSingularRelationshipDescriptors = { // describe the related items as added to an existing single item
@@ -90,7 +92,7 @@
         'tag': {'parent': 'and its tags', 'child': 'and the items it tags', 'any-relationship':'and its tag relations'},
         'annotation': {'parent': 'and its annotations', 'child': 'and the items it annotates', 'any-relationship':'and its annotation relations'},
         'reference': {'parent': 'and its referencers', 'child': 'and the media it references', 'any-relationship':'and its media relations'},
-        'comment': {'parent': 'and its comments', 'child': 'and the items it comments on', 'any-relationship':'and its comment relations'}
+        'reply': {'parent': 'and its comments', 'child': 'and the items it comments on', 'any-relationship':'and its comment relations'}
       };
 
       var spinner_options = {
@@ -157,6 +159,7 @@
       }
       this.checkSavePrivileges();
       this.getOntologyData();
+      this.getLensData();
       this.getLensResults(this.scalarLensObject, this.options.onLensResults);
       this.buildEditorDom();
       this.updateEditorDom();
@@ -203,7 +206,7 @@
       let lensHtml = $(
         `<div class="row lens">
           <div class="lens-editor">
-            <div class="col-xs-12">
+            <div class="lens-editor-wrapper col-xs-12">
               <div class="lens-expand-container" data-toggle="collapse" data-target="">
                 <div class="lens-icon-wrapper col-xs-1">
                   <span class="lens-icon"></span>
@@ -256,8 +259,9 @@
       lensHtml.append(this.addOkModal());
       lensHtml.append(this.addSubmitModal());
       lensHtml.find('.lens-editor').append(this.addDuplicateCopyPrompt());
+      this.updateDuplicateCopyPrompt();
       lensHtml.find('.lens-editor').append(this.reviewSubmittedLenses());
-      lensHtml.append(this.duplicateLensForCurrentUser())
+      lensHtml.append(this.addDuplicateLensForCurrentUserModal())
       this.buttonContainer = $(this.element).find('.lens-tags').eq(0);
       this.primaryBadge = lensHtml.find('.badge');
       this.updateBadge(this.primaryBadge, -1, 'light');
@@ -395,20 +399,27 @@
         clearTimeout(saveTimeout);
         saveTimeout = setTimeout(() => {
           me.saveLens(() => me.getLensResults(me.scalarLensObject, me.options.onLensResults));
+          saveTimeout = 0;
         }, 2000);
       });
 
       lensTitle.addEventListener('keydown', (evt) => {
         if (evt.keyCode === 13) {
           evt.preventDefault();
-          clearTimeout(saveTimeout);
-          me.saveLens(() => me.getLensResults(me.scalarLensObject, me.options.onLensResults));
+          if (saveTimeout !== 0) {
+            clearTimeout(saveTimeout);
+            saveTimeout = 0;
+            me.saveLens(() => me.getLensResults(me.scalarLensObject, me.options.onLensResults));
+          }
         }
       });
 
       $('.lens-title').on('focusout', function(ev) {
-        clearTimeout(saveTimeout);
-        me.saveLens(() => me.getLensResults(me.scalarLensObject, me.options.onLensResults));
+        if (saveTimeout !== 0) {
+          clearTimeout(saveTimeout);
+          saveTimeout = 0;
+          me.saveLens(() => me.getLensResults(me.scalarLensObject, me.options.onLensResults));
+        }
       });
     }
 
@@ -454,10 +465,14 @@
         me.updateVisualizationButton(me.scalarLensObject.visualization);
         // no need to do the lens call if all we're changing is the vis, but we still
         // need to let the hosting page know that a change happened
-        me.saveLens(null);
-        if (me.lastResults) {
-          me.lastResults.visualization = me.scalarLensObject.visualization;
-          me.options.onLensResults(me.lastResults, me.scalarLensObject);
+        if (me.scalarLensObject.visualization.type == 'map') {
+          me.saveLens(() => me.getLensResults(me.scalarLensObject, me.options.onLensResults));
+        } else {
+          me.saveLens(null);
+          if (me.lastResults) {
+            me.lastResults.visualization = me.scalarLensObject.visualization;
+            me.options.onLensResults(me.lastResults, me.scalarLensObject);
+          }
         }
       });
       element.find('li a').on('keypress', function(e) { if (e.which == 13) $(this).trigger('click'); })
@@ -528,7 +543,7 @@
 
     ScalarLenses.prototype.updateContentSelectorButton = function(contentSelectorObj, element){
       var me = this;
-      let onClick = function (evt) {
+      let onClick = (evt) => {
         let buttonGroup = $(evt.target).parent().parent().parent();
         let componentIndex = buttonGroup.data('componentIndex');
         let option = $(evt.target).parent().data('option');
@@ -540,7 +555,7 @@
           $('<div></div>').content_selector({
             changeable: true,
             multiple: true,
-            onthefly: true,
+            onthefly: this.userLevel == 'scalar:Author',
             msg: 'Choose items to be included in this lens.',
             callback: function(a){
               me.handleContentSelected(a)
@@ -757,13 +772,11 @@
 
       // on reload, add active class to dropdown list item
       let list = element.find('.dropdown-menu li');
+      list.removeClass('active');
       for(let i = 0; i < 7; i++){
         let listItemValue = $(list[i]).data('option').value;
         if(listItemValue == filterObj.subtype){
           $(list[i]).addClass('active');
-        }
-        if(listItemValue == 'delete'){
-          $(list[i]).removeClass('active');
         }
       }
 
@@ -805,7 +818,7 @@
               } else if (filterObj.operator == 'inclusive') {
                 buttonText += 'contain “';
               } else if (filterObj.operator == 'exact-match') {
-                buttonText += 'exactly match “';
+                buttonText += 'match “';
               }
               buttonText += filterObj.content + '”';
             break;
@@ -850,7 +863,7 @@
               } else if(metadataOperator == 'exclusive'){
                 operatorText = 'don’t contain'
               } else if(metadataOperator == 'exact-match'){
-                operatorText = 'exactly match'
+                operatorText = 'match'
               }
               buttonText = `that ${operatorText} “${metadataContent}” in ${metadataProperty.split(':')[1]}`;
             break;
@@ -1076,7 +1089,7 @@
           }
           me.updateEditorDom();
           if (me.scalarLensObject.components.length == 2) {
-            me.showOkModal('Multiple content sources', '<p>Now that your lens includes more than one content source, you can use the gray menu at the top of the lens editor to determine how their results will be merged.</p><p>Selecting <strong>"the combination of"</strong> means all items from all sources will be returned, while <strong>"the intersection of"</strong> means that only the items the sources have in common will be returned.</p>', null);
+            me.showOkModal('Multiple content sources', '<p>Now that your lens includes more than one content source, you can use the gray menu at the top of the lens editor to determine how their results will be merged.</p><p>Selecting <strong>“the combination of”</strong> means all items from all sources will be returned, while <strong>“the intersection of”</strong> means that only the items the sources have in common will be returned.</p>', null);
           }
           break;
 
@@ -1449,7 +1462,7 @@
 
         case 'relationship':
           let relationshipType = $('#relationship-content-button').data('option').value;
-          if (!relationshipType) {
+          if (relationshipType.length == 0) {
             passedValidation = false;
             errorMessage = 'You must select a content type.';
             if (!isSilent) $('#relationship-content-button').addClass('validation-error');
@@ -1607,7 +1620,7 @@
           filterObj = {
             "type":"filter",
             "subtype":"relationship",
-            "content-types": [$('#relationship-content-button').data('option').value],
+            "content-types": $('#relationship-content-button').data('option').value ? $('#relationship-content-button').data('option').value : [],
             "relationship": $('#relationship-type-button').data('option').value
           }
         break;
@@ -1875,21 +1888,21 @@
           {label: "comments", value: "reply"}
         ]);
 
-        let contentList = $('#content-type-list li');
-        let contentArray = filterObj["content-types"];
-        contentList.each(function(i, item)  {
-          if(contentArray.indexOf($(item).data('option').value) != -1 ){
-            $(contentList[i]).addClass('active');
+      let contentList = $('#content-type-list li');
+      let contentArray = filterObj["content-types"];
+      contentList.each(function(i, item)  {
+        if(contentArray.indexOf($(item).data('option').value) != -1 ){
+          $(contentList[i]).addClass('active');
+        }
+      })
+
+      if(contentArray.length == 1){
+        $('#content-type-list li').each(function(){
+          if($(this).data('option').value == contentArray[0]) {
+            $('#content-type-button').text($(this).data('option').label).append('<span class="caret"></span>');
           }
         })
-
-        if(contentArray.length == 1){
-          $('#content-type-list li').each(function(){
-            if($(this).data('option').value == contentArray[0]) {
-              $('#content-type-button').text($(this).data('option').label).append('<span class="caret"></span>');
-            }
-          })
-        }
+      }
 
       return element;
     }
@@ -1943,9 +1956,9 @@
                 include<span class="caret"></span>
               </button>
               <ul id="operator-list" class="dropdown-menu filter-by-content"></ul>
-              <span style="margin-left:10px;vertical-align:middle;"> this text:</span>
             </div>
           </div>
+          <p class="filter-text-desc">this case-insensitive text:</p>
           <div class="row">
             <input id="content-input" type="text" class="form-control" aria-label="..." placeholder="Enter text" style="max-width:300px;margin:10px auto 0;" required>
           </div>
@@ -1960,8 +1973,8 @@
         '<li><a tabindex="-1"></a></li>',
         [
           {label: "contain", value: "inclusive"},
-          {label: "don’t contain", value: "exclusive"},
-          {label: "exactly match", value: "exact-match"}
+          {label: "contain (whole words only)", value: "exact-match"},
+          {label: "don’t contain", value: "exclusive"}
         ]);
 
       $('#content-input').val(filterObj.content).on('change', onClick);
@@ -1989,11 +2002,11 @@
         <div class="filterByRelationship">
           <p class="filter-text-desc">Add any items that are</p>
           <div class="btn-group"><button type="button" id="relationship-content-button" class="btn btn-default btn-md dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" value"">
-              Select type..<span class="caret"></span></button>
+              Select type<span class="caret"></span></button>
             <ul id="relationship-content-list" class="dropdown-menu"></ul>
           </div>
           <div class="btn-group"><button id="relationship-type-button" type="button" class="btn btn-default btn-md dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" value"">
-              Select relationship...<span class="caret"></span></button>
+              Select relationship<span class="caret"></span></button>
             <ul id="relationship-type-list" class="dropdown-menu"></ul>
           </div>
           <p id="human-readable-text">(<span class="human-readable-relationship"></span>) any of these <span class="filter-pre-quantity">0</span> items</p>
@@ -2012,7 +2025,7 @@
           {label: "tag", value: "tag"},
           {label: "annotation", value: "annotation"},
           {label: "media", value: "reference"},
-          {label: "comment", value: "comment"}
+          {label: "comment", value: "reply"}
         ]);
 
       this.populateDropdown($('#relationship-type-button'), $('#relationship-type-list'), filterObj.relationship, onClick,
@@ -2033,8 +2046,8 @@
       // update relationship content type menu
       let relationshipContentButton = $('#relationship-content-button');
       option = relationshipContentButton.data('option');
-      if (!option) { // if nothing selected yet, create a placeholder option
-        option = {label: 'Select type(s)', value: null};
+      if (option.value.length == 0) { // if nothing selected yet, create a placeholder option
+        option = {label: 'Select type(s)', value: []};
         relationshipContentButton.data('option', option);
       }
       relationshipContentButton.text(option.label).append('<span class="caret"></span>');
@@ -2050,8 +2063,8 @@
       relationshipTypeButton.text(option.label).append('<span class="caret"></span>');
       let relationshipType = option.value;
 
-      if (relationshipContent) {
-        $('.human-readable-relationship').text('i.e. ' + this.exclusiveRelationshipDescriptors[relationshipContent][relationshipType]);
+      if (relationshipContent.length > 0) {
+        $('.human-readable-relationship').text('i.e. ' + this.exclusiveRelationshipDescriptors[relationshipContent[0]][relationshipType]);
       } else {
         $('.human-readable-relationship').text('no relationship selected');
       }
@@ -2143,9 +2156,10 @@
               <div class="btn-group"><button type="button" id="operator-button" class="btn btn-default btn-md dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" value"">
                   includes<span class="caret"></span></button>
                 <ul id="operator-list" class="dropdown-menu"></ul>
-                <span style="margin-left:10px;vertical-align:middle;"> this text:</span>
+                <span style="margin-left:10px;vertical-align:middle;"></span>
               </div>
             </div>
+            <p class="filter-text-desc">this case-insensitive text:</p>
             <div class="row">
               <input type="text" id="metadata-content" type="number" min="0" max="5" class="form-control metadataContent" aria-label="..." placeholder="Enter text">
             </div>
@@ -2180,8 +2194,8 @@
         '<li><a tabindex="-1"></a></li>',
         [
           {label: "contain", value: "inclusive"},
-          {label: "don’t contain", value: "exclusive"},
-          {label: "exactly match", value: "exact-match"}
+          {label: "contain (whole words only)", value: "exact-match"},
+          {label: "don’t contain", value: "exclusive"}
         ]);
 
       // save metadata content value
@@ -2831,7 +2845,7 @@
       modalContainer.empty();
       let element = $(`
         <div class="row">
-          <span>Sort by creation date in </span>
+          <span>Sort by modification date in </span>
           <div class="btn-group">
             <button id="sort-edit-date-button" type="button" class="btn btn-default btn-md dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
               Select order...<span class="caret"></span>
@@ -3148,6 +3162,7 @@
     // populate a dropdown
     ScalarLenses.prototype.populateDropdown = function(buttonElement, listElement, currentData, onClick, markup, options) {
       listElement.empty();
+      let values = [];
       options.forEach((option, index) => {
         let listItem;
         switch (option.value) {
@@ -3170,13 +3185,26 @@
           }
           this.getInnermostChild(listItem).text(option.label);
           listItem.data('option', option).on('click', function(evt){
-            buttonElement.data('option', $(this).data('option'));
+            let thisOption = $(this).data('option');
+            if (Array.isArray(currentData)) {
+              buttonElement.data('option', {label:thisOption.label, value:[thisOption.value]});
+            } else {
+              buttonElement.data('option', thisOption);
+            }
             onClick(evt);
           });
           if (currentData) {
             if (Array.isArray(currentData)) {
-              if (currentData.indexOf(option.value) != -1) {
-                buttonElement.data('option', option);
+              let index = currentData.indexOf(option.value);
+              if (index != -1) {
+                values.push(option.value);
+              }
+              if (values.length == 1) {
+                if (index != -1) {
+                  buttonElement.data('option', {label: option.label, value:values});
+                }
+              } else {
+                buttonElement.data('option', {value:values});
               }
             } else if (currentData == option.value) {
               buttonElement.data('option', option);
@@ -3493,6 +3521,7 @@
           this.scalarLensObject.submitted = true;
           this.updateOptionsMenu();
           this.getLensResults(this.scalarLensObject, this.options.onLensResults);
+          $('body').trigger('lensUpdated', this.scalarLensObject);
     			alert('The lens was submitted successfully.');
     			// Email sent (if it can) + JSON submittted field set to true
     		},
@@ -3536,6 +3565,58 @@
             }
         }
       }, error);
+    }
+
+    // allows duplication of a lens that doesn't belong to the current user
+    ScalarLenses.prototype.duplicateLensByUserId = function() {
+
+      let duplicateJson = JSON.parse(JSON.stringify(this.scalarLensObject));
+      duplicateJson.title += ' copy';
+      duplicateJson.user_id = this.userId;
+      duplicateJson.user_level = this.userLevel;
+      delete duplicateJson.slug;
+      delete duplicateJson.urn;
+      delete duplicateJson.book_urn;
+			let data = {
+				'action': 'add',
+				'native': '1',
+				user: this.userId,
+				'api_key': '',
+				'dcterms:title': duplicateJson.title,
+				'dcterms:description': '',
+				'sioc:content': '',
+        'scalar:metadata:is_live': '0',
+				'rdf:type': 'http://scalar.usc.edu/2012/01/scalar-ns#Composite',
+        'scalar:child_urn': 'urn:scalar:book:' + this.bookId,
+        'scalar:child_type': 'http://scalar.usc.edu/2012/01/scalar-ns#Book',
+        'scalar:child_rel': 'grouped',
+        contents: JSON.stringify(duplicateJson)
+			};
+
+    	$.ajax({
+    		type: "POST",
+    		url: $('link#parent').attr('href') + 'save_lens_page_by_user_id',
+    		data: data,
+    		success: function(json) {
+    			if ('undefined' != typeof(json['error'])) {
+    				alert('There was an error: ' + json['error']);
+    				return;
+    			};
+          var firstProp;
+          for(var key in json) {
+              if(json.hasOwnProperty(key)) {
+                  var url = $('link#parent').attr('href') + json['slug'];
+                  window.location.href = url;
+                  break;
+              }
+          }
+    		},
+    		error: function(err) {
+    			alert('There was an error connecting to the server.');
+    		},
+    		dataType: 'json'
+    	});
+
     }
 
     ScalarLenses.prototype.addOkModal = function() {
@@ -3631,28 +3712,38 @@
       let element = $(`
         <div id="duplicate-copy-prompt">
           <div class="row">
-            <div class="col-xs-10">
-              <p class="caption_font"><strong>You have made edits to this lens which have not been saved, since you are not its owner.</strong>
-              Would you like to save these changes to your own copy of the lens?</p>
-            </div>
-            <div class="col-xs-2">
-              <button type="button" class="btn btn-default pull-right save">Save</button>
-            </div>
           </div>
         </div>
       `)
 
       var me = this;
 
-      // save create copy of lens
-      $(element).find('.save').on('click', function(){
-          me.duplicateLensForCurrentUser();
-      });
-
       return element;
     }
 
-    ScalarLenses.prototype.duplicateLensForCurrentUser = function(){
+    ScalarLenses.prototype.updateDuplicateCopyPrompt = function() {
+      $('#duplicate-copy-prompt').find('.save').off();
+      if (this.myLenses.length >= this.maxLenses) {
+        $('#duplicate-copy-prompt .row').html(`<div class="col-xs-12">
+          <p class="caption_font"><strong>You have made edits to this lens which have not been saved, since you are not its owner.</strong>
+          As you have already reached the maximum of ${this.maxLenses} lenses, saving your changes to a new copy of the lens is not possible.</p>
+        </div>`);
+      } else {
+        $('#duplicate-copy-prompt .row').html(`<div class="col-xs-10">
+          <p class="caption_font"><strong>You have made edits to this lens which have not been saved, since you are not its owner.</strong>
+          Would you like to save these changes to your own copy of the lens?</p>
+        </div>
+        <div class="col-xs-2">
+          <button type="button" class="btn btn-default pull-right save">Save</button>
+        </div>`);
+        // save create copy of lens
+        $('#duplicate-copy-prompt').find('.save').on('click', () => {
+            this.duplicateLensByUserId();
+        });
+      }
+    }
+
+    ScalarLenses.prototype.addDuplicateLensForCurrentUserModal = function(){
 
       let element = $(
         `<div id="duplicateConfirm" class="modal fade caption_font" role="dialog">
@@ -3764,6 +3855,36 @@
       return element;
     }
 
+    ScalarLenses.prototype.getLensData = function(){
+      let bookId = $('link#book_id').attr('href');
+      let baseURL = $('link#approot').attr('href').replace('application', 'lenses');
+      let mainURL = `${baseURL}?book_id=${bookId}`;
+      this.myLenses = [];
+      $.ajax({
+        url:mainURL,
+        type: "GET",
+        dataType: 'json',
+        contentType: 'application/json',
+        async: true,
+        context: this,
+        success: this.handleLensData,
+        error: function error(response) {
+           console.log('There was an error attempting to communicate with the server.');
+           console.log(response);
+        }
+      });
+    }
+
+    ScalarLenses.prototype.handleLensData = function(response){
+      let data = response;
+      data.forEach((lens, index) => {
+        if (lens.user_id == this.userId) {
+          this.myLenses.push(lens);
+        }
+      });
+      this.updateDuplicateCopyPrompt();
+    };
+
     ScalarLenses.prototype.getLensResults = function(lensObject, success) {
       this.updateBadge(this.primaryBadge, -1, 'light');
       lensObject.book_urn = 'urn:scalar:book:' + $('link#book_id').attr('href');
@@ -3795,6 +3916,10 @@
     	     console.log('There was an error attempting to communicate with the server.');
         }
       });
+    }
+
+    ScalarLenses.prototype.abort = function() {
+      if (this.lensRequest) this.lensRequest.abort();
     }
 
     ScalarLenses.prototype.updateHistoryDataForLens = function(lensObject) {
@@ -3857,7 +3982,7 @@
       if (this.userLevel == 'scalar:Author') { // author
         // authors can't edit reader lenses
         this.canSave = this.scalarLensObject.userLevel != 'scalar:Reader';
-      } else if (this.user_level == 'scalar:Reader') { // reader added to the book
+      } else if (this.userLevel == 'scalar:Reader') { // reader added to the book
         if (this.userId == this.scalarLensObject.user_id) {
           this.canSave = true;
         }
@@ -3871,12 +3996,17 @@
     ScalarLenses.prototype.saveLens = function(successHandler){
       //console.log(JSON.stringify(this.scalarLensObject, null, 2));
 
-      if (this.userId != 'unknown' && this.userLevel == 'unknown') {  // reader not added to the book
-    	  this.updateLensByUserId(successHandler);
-    	  return;
-      } else if (this.userLevel == 'scalar:Reader') {  // reader added to the book
-    	  this.updateLensByUserId(successHandler);
-    	  return;
+      // reader not added to the book, or reader added to book
+      if ((this.userId != 'unknown' && this.userLevel == 'unknown') || this.userLevel == 'scalar:Reader') {
+        if (this.canSave == true) {
+          this.updateLensByUserId(successHandler);
+      	  return;
+        } else {
+          $('body').trigger('lensUpdated', this.scalarLensObject);
+          if (successHandler) successHandler();
+          $('#duplicate-copy-prompt').addClass('show-lens-prompt');
+          return;
+        }
       }
 
       this.scalarLensObject.user_level = this.userLevel;
@@ -3947,6 +4077,10 @@
     ScalarLenses.prototype.handleContentSelected = function(nodes){
       if (nodes && nodes.length != 0){
         let nodeTitles = nodes.map(node => node.slug);
+        if (Array.isArray(this.scalarLensObject.components[this.editedComponentIndex]['content-selector'])) {
+          // if a lens is saved without content being selected, content-selector will come back as an array -- make sure it's an object
+          this.scalarLensObject.components[this.editedComponentIndex]['content-selector'] = {};
+        }
         this.scalarLensObject.components[this.editedComponentIndex]["content-selector"].type = 'specific-items';
         this.scalarLensObject.components[this.editedComponentIndex]["content-selector"].items = nodeTitles;
         const contentSelections = this.scalarLensObject.components[this.editedComponentIndex]["content-selector"]

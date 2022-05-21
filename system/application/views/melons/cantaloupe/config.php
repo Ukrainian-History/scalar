@@ -50,6 +50,7 @@ $config['views'] = array(
 // It's important to keep some functional views present, such as 'plain', 'edit', and 'versions', otherwise these will become unavailable
 $config['media_views'] = array(
 	'plain' => array('name'=>'Basic','description'=>'<b>Shows the media file on its own.</b> In the Basic layout, the media file is presented as a standalone object.','image'=>'views/melons/cantaloupe/images/view_media.gif'),
+	'full' => array('name'=>'Basic: Full Width','description'=>'<b>Shows the media file on its own and at full width.</b> In the Basic: Full Width layout, the media file is presented as a standalone object. It will render at the full width of the page even if the media is smaller than the page size.','image'=>'views/melons/cantaloupe/images/view_media_fullwidth.gif'),
 	'meta' => array('name'=>'Metadata','description'=>'<b>Displays all metadata for the media file.</b> The Metadata layout displays the media file at the top with all of its metadata in a table below.','image'=>'views/melons/cantaloupe/images/view_media_metadata.gif'),
 	'edit' => '',
 	'annotation_editor' => '',
@@ -92,7 +93,8 @@ $config['reference_options'] = array(
 	'insertNote' 			=> array(
 								'show-title' => array('yes','no'),
 								'show-description' => array('yes','no'),
-								'show-content' => array('yes','no')
+								'show-content' => array('yes','no'),
+								'type' => 'note'
 								),
 	'insertInlineNote' 		=> array(
 								'show-title' => array('yes','no'),
@@ -100,7 +102,8 @@ $config['reference_options'] = array(
 								'show-content' => array('yes','no'),
 								'size' => array('small', 'medium', 'large', 'full'),
 								'text-wrap' => array('create-new-line-for-media','wrap-text-around-media'),
-								'align' => array('left', 'center', 'right')
+								'align' => array('left', 'center', 'right'),
+								'type' => 'inlineNote'
 								),
 	'createInternalLink' 	=> array()
 );
@@ -134,6 +137,6 @@ $config['predefined_css'] = array(
 	array(
 		'title'=>'Display description below title',
 		'description'=>'This snippet will display the page\'s description underneath the page\'s title at the top of the page.',
-		'insert'=>"header > h1 ~ [property=\"dcterms:description\"] {display:block !important; color:#888888; margin:0rem 2rem 4rem 2rem;}\n@media only screen and (min-width : 500px) {\n  header > h1 ~ [property=\"dcterms:description\"] {margin:-3rem 7.2rem 4rem 7.2rem;}\n}"	
+		'insert'=>"header > h1 ~ [property=\"dcterms:description\"] {display:block !important; color:#888888; margin:0rem 2rem 4rem 2rem;}\n@media only screen and (min-width : 500px) {\n  header > h1 ~ [property=\"dcterms:description\"] {margin:-3rem 7.2rem 4rem 7.2rem;}\n}"
 	)
 );

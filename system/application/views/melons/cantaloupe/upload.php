@@ -142,7 +142,7 @@ function insert_rel_fields(current_urn, current_slug) {
         }
       }
       // References
-      if ('undefined'!=typeof(data[s]['http://purl.org/dc/terms/isReferencedBy'])) {
+      if (s==current_uri && 'undefined'!=typeof(data[s]['http://purl.org/dc/terms/isReferencedBy'])) {
       	var version = data[s]['http://purl.org/dc/terms/isReferencedBy'][0].value;
       	version = data[version]['http://scalar.usc.edu/2012/01/scalar-ns#version'][0].value;
       	fields.push({name:'has_reference',value:get_urn_from_uri(data,version)});
@@ -275,7 +275,7 @@ Other supported formats: 3gp, aif, flv, mov, mpg, oga, tif, webm<br />
 		<label><input type="radio" name="name_policy" value="title" CHECKED />&nbsp; Create from title</label>
 	</td></tr>
 	<tr><td class="field">Replace existing</td><td>
-		<select name="replace" class="form-control" style="max-width:570px;"><option rel="" value="">-- choose an existing local media file to replace with this upload</option><?
+		<select name="replace" class="form-control" style="max-width:570px;"><option rel="" value="">Choose an existing local media file to replace...</option><?
 	  	foreach($book_media as $book_media_row) {
 	  		if (!isset($book_media_row->versions) || empty($book_media_row->versions)) continue;
 	  		if (!isset($book_media_row->versions[0])) continue;
@@ -294,9 +294,9 @@ Other supported formats: 3gp, aif, flv, mov, mpg, oga, tif, webm<br />
 		<small>IPTC or ID3 fields embedded in the file will auto-populate during upload</small>
 	</td></tr>
 	<tr id="metadata_rows_parent"><td class="field"></td><td><div id="metadata_rows"></div></td></tr>
-        <tr><td>IIIF</td><td>
+		<tr><td>IIIF</td><td>
 		<div class="checkbox">
-			<label><input type="checkbox" id="media_file_url_iiif" name="iiif-url" /> Is IIIF manifest</label>
+			<label><input type="checkbox" id="media_file_url_iiif" name="iiif-url" /> Is IIIF Manifest</label>
 		</div>
 	</td></tr>
 	<tr><td class="field">Choose file</td><td>

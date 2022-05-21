@@ -313,7 +313,7 @@ class Version_model extends MY_Model {
     }
     
     /**
-     * Search the for versions that have a certain predicate $p (and, if sent, search its value for $o
+     * Search the for versions that have a certain predicate $p (and, if sent, search its value for $o)
      */
     public function get_by_predicate($book_id=0, $p='', $all_versions=false, $id_array=null, $o='', $exact_match=false) {
     	
@@ -366,6 +366,7 @@ class Version_model extends MY_Model {
 	    	for ($j = 0; $j < count($pages); $j++) {
 	    		$pages[$j]->versions = array($this->get_single($pages[$j]->content_id, $pages[$j]->recent_version_id, $sq='', false));
 	    		for ($k = 0; $k < count($pages[$j]->versions); $k++) {
+	    			if (empty($pages[$j]->versions[$k])) continue;
 	    			$book_version_urns[] = $this->urn($pages[$j]->versions[$k]->version_id);
 	    		}
 	    	}

@@ -36,7 +36,7 @@ function validate_upload_form_file($form) {
 	send_form_show_loading();
 
 	// Save using standard POST to the system, then route to the save API for creating the page
-	$form.find('#hidden_upload').load(function() {
+	$form.find('#hidden_upload').on('load', function() {
 		validate_upload_form_file_return($form);
 	});
 
@@ -136,9 +136,9 @@ function validate_edit_form(form, no_action) {
 				return false;
 			}
 		}
-                if ($('#media_file_url_iiif')) {
-                    $('#media_file_url_iiif').val = $('#media_file_url_iiif').checked === true ? 1 : 0;
-                }
+		if ($('#media_file_url_iiif')) {
+			$('#media_file_url_iiif').val = $('#media_file_url_iiif').checked === true ? 1 : 0;
+		}
 		return true;
 	};
 
@@ -258,10 +258,35 @@ function send_form($form, additional_values, success, redirect_url) {
 		}
 	}
 
-        // if user indicates the url is a iiif manifest
-        if (values['iiif-url'] && values['iiif-url'] === "on" && values['scalar:url'].indexOf('?iiif-manifest=1') === -1) {
-            values['scalar:url'] = values['scalar:url'].concat('?iiif-manifest=1');
-        }
+	// if user indicates the url is a iiif manifest or unity scene
+
+  // checkbox input, iiif only (for media upload)
+	if (values['iiif-url'] && values['iiif-url'] === "on" && values['scalar:url'].indexOf('?iiif-manifest=1') === -1) {
+		values['scalar:url'] = values['scalar:url'].concat('?iiif-manifest=1');
+	}
+
+  // select input, iiif or unity (for media edit)
+  if (values['media-type']) {
+    switch (values['media-type']) {
+      case 'iiif':
+      if (values['scalar:url'].indexOf('?iiif-manifest=1') === -1) {
+        values['scalar:url'] = values['scalar:url'].split('?')[0];
+        values['scalar:url'] = values['scalar:url'].concat('?iiif-manifest=1');
+      }
+      break;
+      case 'unity':
+      if (values['scalar:url'].indexOf('?unity-webgl=1') === -1) {
+        values['scalar:url'] = values['scalar:url'].split('?')[0];
+        values['scalar:url'] = values['scalar:url'].concat('?unity-webgl=1');
+      }
+      break;
+      default:
+      if (values['scalar:url'].indexOf('?iiif-manifest=1') !== -1 || values['scalar:url'].indexOf('?unity-webgl=1') !== -1) {
+        values['scalar:url'] = values['scalar:url'].split('?')[0];
+      }
+      break;
+    }
+  }
 
 	if ('undefined'==typeof(success) || null==success) {
 		success = function(version) {

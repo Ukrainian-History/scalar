@@ -184,8 +184,6 @@ getPropertyValue:function(a){return this[a]||""},item:function(){},removePropert
                 base.$el.addClass('hypothesis_active');
             }
 
-            var lenses_are_active = ('true' == $('link#lenses_are_active').attr('href')) ? true : false;
-
             //Store the home URL so that we can use these later without making extra queries on the DOM
             var home_url = base.$el.find('#book-title').attr("href");
 
@@ -251,11 +249,11 @@ getPropertyValue:function(a){return this[a]||""},item:function(){},removePropert
                                                             '<li><i class="loader"></i></li>'+
                                                         '</ul>'+
                                                     '</li>'+
-                                                    (lenses_are_active ? '<li id="lenses_menu" class="dropdown">'+
+                                                    '<li id="lenses_menu" class="dropdown">'+
                                                         '<a role="menuitem" aria-expanded="false"><span class="menuIcon rightArrowIcon pull-right"></span><span class="menuIcon" id="lensIcon"></span>Lenses</a>'+
                                                         '<ul class="dropdown-menu" role="menu">'+
                                                         '</ul>'+
-                                                    '</li>' : '')+
+                                                    '</li>'+
                                                     '<li id="vis_menu" class="dropdown">'+
                                                         '<a role="menuitem" aria-expanded="false"><span class="menuIcon rightArrowIcon pull-right"></span><span class="menuIcon" id="visIcon"></span>Visualizations</a>'+
                                                         '<ul class="dropdown-menu" role="menu">'+
@@ -263,10 +261,12 @@ getPropertyValue:function(a){return this[a]||""},item:function(){},removePropert
                                                             '<li class="vis_link" data-vistype="vistoc"><a role="menuitem"><span class="menuIcon" id="tocIcon"></span> Contents</a></li>'+
                                                             '<li class="vis_link" data-vistype="visconnections"><a role="menuitem"><span class="menuIcon" id="connectionsIcon"></span> Connections</a></li>'+
                                                             '<li class="vis_link" data-vistype="visindex"><a role="menuitem"><span class="menuIcon" id="gridIcon"></span> Grid</a></li>'+
+                                                            '<li class="vis_link" data-vistype="vismap"><a role="menuitem"><span class="menuIcon" id="mapIcon"></span> Map</a></li>'+
                                                             '<li class="vis_link" data-vistype="visradial"><a role="menuitem"><span class="menuIcon" id="radialIcon"></span> Radial</a></li>'+
                                                             '<li class="vis_link" data-vistype="vispath"><a role="menuitem"><span class="menuIcon" id="pathIcon"></span> Path</a></li>'+
                                                             '<li class="vis_link" data-vistype="vismedia"><a role="menuitem"><span class="menuIcon" id="mediaIcon"></span> Media</a></li>'+
                                                             '<li class="vis_link" data-vistype="vistag"><a role="menuitem"><span class="menuIcon" id="tagIcon"></span> Tag</a></li>'+
+                                                            '<li class="vis_link" data-vistype="viswordcloud"><a role="menuitem"><span class="menuIcon" id="wordCloudIcon"></span> Word Cloud</a></li>'+
                                                         '</ul>'+
                                                     '</li>'+
 			/*
@@ -310,7 +310,7 @@ getPropertyValue:function(a){return this[a]||""},item:function(){},removePropert
                                             (base.okToAdd?
                                                 '<li id="ScalarHeaderNew"><a class="headerIcon" href="' + base.get_param(scalarapi.model.urlPrefix + 'new.edit')+'" id="newIcon" title="New page button. Click to create a new page."><span class="visible-xs">New page</span></a></li>'
                                                 :'')+
-                                            (base.okToCopyEdit&&!base.isEditorialPathPage&&base.currentNode!=null?
+                                            (base.okToCopyEdit&&!base.isEditorialPathPage?
                                                 '<li id="ScalarHeaderEdit"><a class="headerIcon" href="' + scalarapi.stripEdition(base.get_param(scalarapi.model.urlPrefix + base.current_slug + '.edit')) + '" id="editIcon" title="Edit button. Click to edit the current page or media."><span class="visible-xs">Edit page</span></a></li>'
                                                 :'')+
                                             (base.okToAdd?
@@ -324,7 +324,7 @@ getPropertyValue:function(a){return this[a]||""},item:function(){},removePropert
                                                     '<ul class="dropdown-menu" role="menu" id="ScalarHeaderMenuImportList">'+
                                                         '<li class="dropdown">'+
                                                             '<a role="menuitem" aria-expanded="false"><span class="menuIcon rightArrowIcon pull-right"></span>Affiliated archives</a>'+
-                                                            '<ul class="dropdown-menu" role="menu">'+
+                                                            '<ul class="dropdown-menu affiliated-archives" role="menu">'+
                                                                 '<li><a href="' + base.get_param(scalarapi.model.urlPrefix + 'import/critical_commons') + '">Critical Commons</a></li>'+
                                                                 '<li><a href="' + base.get_param(scalarapi.model.urlPrefix + 'import/internet_archive') + '">Internet Archive</a></li>'+
                                                                 '<li><a href="' + base.get_param(scalarapi.model.urlPrefix + 'import/shoah_foundation_vha_online') + '">Shoah Foundation VHA Online</a></li>'+
@@ -333,16 +333,17 @@ getPropertyValue:function(a){return this[a]||""},item:function(){},removePropert
                                                         '</li>'+
                                                         '<li class="dropdown">'+
                                                             '<a role="menuitem" aria-expanded="false"><span class="menuIcon rightArrowIcon pull-right"></span>Other archives</a>'+
-                                                            '<ul class="dropdown-menu" role="menu">'+
+                                                            '<ul class="dropdown-menu other-archives" role="menu">'+
                                                                 '<li><a href="' + base.get_param(scalarapi.model.urlPrefix + 'import/omeka') + '">Omeka sites</a></li>'+
                                                                 '<li><a href="' + base.get_param(scalarapi.model.urlPrefix + 'import/omeka_s') + '">Omeka S sites</a></li>'+
-                                                                '<li><a href="' + base.get_param(scalarapi.model.urlPrefix + 'import/soundcloud') + '">SoundCloud</a></li>'+
+                                                                /*'<li><a href="' + base.get_param(scalarapi.model.urlPrefix + 'import/soundcloud') + '">SoundCloud</a></li>'+*/
                                                                 '<li><a href="' + base.get_param(scalarapi.model.urlPrefix + 'import/youtube') + '">YouTube</a></li>'+
+                                                                '<li id="import-harvard"><a href="' + base.get_param(scalarapi.model.urlPrefix + 'import/harvard_art_museums') + '">Harvard Art Museums</a></li>'+
                                                             '</ul>'+
                                                         '</li>'+
                                                         '<li class="dropdown">'+
                                                         	'<a role="menuitem" aria-expanded="false"><span class="menuIcon rightArrowIcon pull-right"></span>Files and URLs</a>'+
-                                                        	'<ul class="dropdown-menu" role="menu">'+
+                                                        	'<ul class="dropdown-menu files-and-urls" role="menu">'+
 		                                                        '<li class="dropdown">'+
 		                                                            '<a role="menuitem" href="' + base.get_param(scalarapi.model.urlPrefix + 'upload') + '">Upload media files</a>'+
 		                                                        '</li>'+
@@ -374,7 +375,7 @@ getPropertyValue:function(a){return this[a]||""},item:function(){},removePropert
                                         '</ul>'+
                                     '</div>'+
                                 '</div>';
-            base.mobileTOCMenu = $('<div id="mobileMainMenuSubmenus" class="heading_font tocMenu"><div class="toc"><header class="mainMenu"><a class="headerIcon"><span class="visible-xs">Table of Contents</span></a></header><footer><div class="footer_content"><button class="btn back text-center"><img src="../system/application/views/melons/cantaloupe/images/back_icon.png" width="30" alt="Go back"/></button><button class="btn close_menu text-center"><img src="../system/application/views/melons/cantaloupe/images/close_menu_icon.png" width="30" alt="Close all submenus"/></span></button></div></footer></div><div class="pages"></div></div>').appendTo('body');
+            base.mobileTOCMenu = $('<div id="mobileMainMenuSubmenus" class="heading_font tocMenu"><div class="toc"><header class="mainMenu"><a class="headerIcon"><span class="visible-xs">Table of Contents</span></a></header><footer><div class="footer_content"><button class="btn back text-center"><img src="' + $('link#approot').attr('href') + 'views/melons/cantaloupe/images/back_icon.png" width="30" alt="Go back"/></button><button class="btn close_menu text-center"><img src="' + $('link#approot').attr('href') + 'views/melons/cantaloupe/images/close_menu_icon.png" width="30" alt="Close all submenus"/></span></button></div></footer></div><div class="pages"></div></div>').appendTo('body');
             base.mobileTOCMenu.find('.close_menu, header>a').on('click', function(e){
                 $('#mobileMainMenuSubmenus').removeClass('active');
                 $('.mainMenuDropdown, #ScalarHeaderMenu').css({
@@ -419,6 +420,19 @@ getPropertyValue:function(a){return this[a]||""},item:function(){},removePropert
             	for (var c = 0; c < customScalarHeaderMenuLeftItems.length; c++) {
             		customnavbaritem = $('<li class="customMenuItem">'+customScalarHeaderMenuLeftItems[c]+'</li>');
             		navbar.find('#ScalarHeaderMenuLeft').append(customnavbaritem);
+            	}
+            }
+
+            // remove import options with missing keys
+            if (!$('link#harvard_art_museums_key').attr('href')) {
+              navbar.find('#import-harvard').remove();
+            }
+
+            // Any Airtables?
+            var $airtables = $('link#airtable');
+            if ($airtables.length) {
+            	for (var j = 0; j < $airtables.length; j++) {
+            		navbar.find('#ScalarHeaderMenuImportList').find('ul.other-archives').append('<li><a href="' + base.get_param(scalarapi.model.urlPrefix + 'import/airtable/'+encodeURIComponent($airtables.eq(j).attr('href'))) + '">Airtable: '+$airtables.eq(j).attr('href')+'</a></li>');
             	}
             }
 
@@ -721,6 +735,46 @@ getPropertyValue:function(a){return this[a]||""},item:function(){},removePropert
                     }
                     break;
 
+                    case "vismap":
+                    options.content = 'lens';
+                    options.lens = {
+                      "visualization": {
+                        "type": "map",
+                        "options": {}
+                      },
+                      "components": [
+                        {
+                          "content-selector": {
+                            "type": "items-by-type",
+                            "content-type": "all-content"
+                          },
+                          "modifiers": []
+                        }
+                      ],
+                      "sorts": []
+                    }
+                    break;
+
+                    case "viswordcloud":
+                    options.content = 'lens';
+                    options.lens = {
+                      "visualization": {
+                        "type": "word-cloud",
+                        "options": {}
+                      },
+                      "components": [
+                        {
+                          "content-selector": {
+                            "type": "items-by-type",
+                            "content-type": "page"
+                          },
+                          "modifiers": []
+                        }
+                      ],
+                      "sorts": []
+                    }
+                    break;
+
                     case "vispath":
                     options.content = 'lens';
                     options.lens = {
@@ -876,10 +930,8 @@ getPropertyValue:function(a){return this[a]||""},item:function(){},removePropert
               $('#desktopTitleWrapper').trigger("update");
             });
 
-            if (lenses_are_active) {
-              $('body').on('lensUpdated', base.getLensData);
-              base.getLensData();
-            }
+            $('body').on('lensUpdated', base.getLensData);
+            base.getLensData();
 
             $( '#ScalarHeaderHelp>a' ).on('click', function(e) {
                 base.help.data( 'plugin_scalarhelp' ).toggleHelp();
@@ -1006,6 +1058,7 @@ getPropertyValue:function(a){return this[a]||""},item:function(){},removePropert
             })
             .on('scroll', function(e){
                 var base = $('#scalarheader.navbar').data('scalarheader');
+                if ('undefined' == typeof(base)) return;
                 if(base.usingMobileView){
                     base.oldScrollTop = 0;
                     base.$el.removeClass('short');

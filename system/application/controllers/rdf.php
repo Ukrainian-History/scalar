@@ -25,6 +25,13 @@
  * @version					3.2
  */
 
+// Allow from any origin
+if (isset($_SERVER['HTTP_ORIGIN'])) {
+	header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+	header('Access-Control-Allow-Credentials: true');
+	header('Access-Control-Max-Age: 86400');
+}
+
 class Rdf extends MY_Controller {
 
 	/**
@@ -62,7 +69,7 @@ class Rdf extends MY_Controller {
 			};
 		}
 		// Format (e.g., 'xml', 'json')
-		$allowable_formats = array('xml'=>'xml', 'json'=>'json','rdfxml'=>'xml','rdfjson'=>'json','turtle'=>'turtle','jsonld'=>'jsonld','oac'=>'oac');
+		$allowable_formats = array('xml'=>'xml', 'json'=>'json','rdfxml'=>'xml','rdfjson'=>'json','turtle'=>'turtle','jsonld'=>'jsonld','oac'=>'oac','iiif'=>'iiif');
 		$this->data['format'] = (isset($_REQUEST['format']) && array_key_exists($_REQUEST['format'],$allowable_formats)) ? $allowable_formats[$_REQUEST['format']] : $allowable_formats[key($allowable_formats)];
 		$ext = get_ext($this->uri->uri_string());
 		$this->data['format'] = (!empty($ext) && array_key_exists($ext,$allowable_formats)) ? $allowable_formats[$ext] : $this->data['format'];
@@ -256,6 +263,10 @@ class Rdf extends MY_Controller {
 					$this->load->library( 'OAC_Object', 'oac_object' );
 					$object = 'oac_object';
 					break;
+				case 'iiif':
+					$this->load->library( 'IIIF_Object', 'iiif_object' );
+					$object = 'iiif_object';
+					break;
 				default:
 					$object = 'rdf_object';
 			}
@@ -326,13 +337,21 @@ class Rdf extends MY_Controller {
 					$this->load->library( 'OAC_Object', 'oac_object' );
 					$object = 'oac_object';
 					break;
+				case 'iiif':
+					$this->load->library( 'IIIF_Object', 'iiif_object' );
+					$object = 'iiif_object';
+					break;
 				default:
 					$object = 'rdf_object';
 			}
 			$this->set_url_params();
 			$this->data['url'] = implode('/',array_slice($this->uri->segments, array_search(__FUNCTION__, $this->uri->segments)));
-			// TODO: past versions?
-			$content = $this->pages->get_by_version_url($this->data['book']->book_id, $this->data['url'], true);
+			$this->data['url'] = trim(str_replace(':/', '://', $this->data['url']));  // Turns "https:/..." into "https://..."
+			$content = $this->pages->get_by_version_url($this->data['book']->book_id, $this->data['url'], true);  // Could be an absolute or relative URL
+			if (null == $content) {
+				$this->data['url'] = trim(str_replace(' ', '%20', $this->data['url']));
+				$content = $this->pages->get_by_version_url($this->data['book']->book_id, $this->data['url'], true);  // Try the URL with %20s
+			}
 			if (!empty($content)) {
 				foreach ($content as $content_id => $row) {
 					if (!$row->is_live && !$this->login_is_book_admin($this->data['book']->book_id)) {
@@ -341,7 +360,7 @@ class Rdf extends MY_Controller {
 				}
 				if (!$this->data['versions']) {
 					foreach ($content as $content_id => $row) {
-						$content[$content_id]->versions = array(array_shift($content[$content_id]->versions));
+						$content[$content_id]->versions = array(array_shift($content[$content_id]->versions));  // Most recent version
 					}
 				}
 			}

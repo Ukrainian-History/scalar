@@ -17,6 +17,7 @@
  * permissions and limitations under the License.
  */
 
+
 /**
  * @projectDescription		The MediaElement plug-in creates and manages the interface for a Scalar media resource.
  *							Scalar is a project of The Alliance for Networking Visual Culture (http://scalar.usc.edu).
@@ -132,22 +133,6 @@ function YouTubeGetID(url){
 		 * Pauses playback of time-based media.
 		 */
 		this.pause = function() {
-			// images always return isPlaying = true, so when an annotation link is clicked it will
-			// always try to "pause" the image; here we intercept those calls and show the image annotation instead
-			if (this.model.mediaSource.contentType == 'image') {
-				var annotationNode = scalarapi.model.nodesByURL[this.model.options.seek];
-				if (annotationNode != undefined) {
-					var annotations = annotationNode.getRelations('annotation', 'outgoing', 'index');
-					var i;
-					var n = annotations.length;
-					for (i=0; i<n; i++) {
-						if (this.model.node == annotations[i].target) {
-							this.view.seek(annotations[i]);
-							break;
-						}
-					}
-				}
-			}
 			this.view.pause();
 		}
 
@@ -482,7 +467,7 @@ function YouTubeGetID(url){
 					promise = $.Deferred();
 					pendingDeferredMedia.OpenSeadragon.push(promise);
 
-                                }else if(typeof Mirador === 'undefined' && this.model.mediaSource.contentType == 'manifest'){
+				}else if(typeof Mirador === 'undefined' && this.model.mediaSource.contentType == 'manifest'){
 					if(typeof pendingDeferredMedia.Mirador == 'undefined'){
 						pendingDeferredMedia.Mirador = [];
 						$.getScript(widgets_uri+'/mediaelement/mirador.min.js',function(){
@@ -493,6 +478,24 @@ function YouTubeGetID(url){
 					}
 					promise = $.Deferred();
 					pendingDeferredMedia.Mirador.push(promise);
+
+				}else if(typeof Hls === 'undefined' && player == 'HLS'){
+					if(typeof pendingDeferredMedia.Hls == 'undefined'){
+						pendingDeferredMedia.Hls = [];
+						$.when(
+							$.ajax({
+								url: widgets_uri+'/mediaelement/hls.min.js',
+								dataType: "script",
+								cache: true,
+							})
+						).then(function(){
+							for(var i = 0; i < pendingDeferredMedia.Hls.length; i++){
+									pendingDeferredMedia.Hls[i].resolve();
+							}
+						});
+					}
+					promise = $.Deferred();
+					pendingDeferredMedia.Hls.push(promise);
 
 				}else if(typeof SC === 'undefined' && this.model.mediaSource.contentType == 'audio' && this.model.mediaSource.name == 'SoundCloud'){
 					if(typeof pendingDeferredMedia.SoundCloud == 'undefined'){
@@ -579,7 +582,22 @@ function YouTubeGetID(url){
 					}
 					promise = $.Deferred();
 					pendingDeferredMedia.GoogleMaps.push(promise);
-                }
+				}else if(player == 'native' && $('.book-title').children('[data-semantic-annotation-tool]').length && !$.isFunction($.fn.annotate)){
+					if(typeof pendingDeferredMedia.Waldorf == 'undefined'){
+						pendingDeferredMedia.Waldorf = [];
+						var waldorfLocation = $('link#approot').attr('href') + 'views/widgets/waldorf/';
+						$.when(
+							$.getScript(waldorfLocation + 'jquery-ui-1.12.1.custom/jquery-ui.min.js'),
+							$.getScript(waldorfLocation + 'annotator-frontend-scalar.js')
+						).then(function(){
+							for(var i = 0; i < pendingDeferredMedia.Waldorf.length; i++){
+								pendingDeferredMedia.Waldorf[i].resolve();
+							}
+						});
+					}
+					promise = $.Deferred();
+					pendingDeferredMedia.Waldorf.push(promise);
+				}
 			}
 
 			$.when(promise).then($.proxy(function(){
@@ -1056,9 +1074,9 @@ function YouTubeGetID(url){
 						case 'tiledImage':
 							this.mediaObjectView = new $.DeepZoomImageObjectView(this.model, this);
 						break;
-                        case 'manifest':
-                            this.mediaObjectView = new $.MiradorObjectView(this.model, this);
-                        break;
+						case 'manifest':
+							this.mediaObjectView = new $.MiradorObjectView(this.model, this);
+						break;
 						case 'audio':
 						if (this.model.mediaSource.name == 'SoundCloud') {
 							this.mediaObjectView = new $.SoundCloudAudioObjectView(this.model, this);
@@ -1079,10 +1097,23 @@ function YouTubeGetID(url){
 								}
 							break;
 
+							case 'HLS':
+								if (this.model.node.current.auxProperties['dcterms:type'] == 'Sound') {
+									this.mediaObjectView = new $.HLSAudioObjectView(this.model, this);
+								} else {
+									this.mediaObjectView = new $.HLSVideoObjectView(this.model, this);
+								}
+							break;
+
 							case 'native':
-								this.mediaObjectView = new $.HTML5VideoObjectView(this.model, this);
-								if ($('.book-title').children('[data-semantic-annotation-tool="true"]').length) {
+								if ($('.book-title').children('[data-semantic-annotation-tool]').length) {
 									this.mediaObjectView = new $.SemanticAnnotationToolObjectView(this.model, this);
+								} else {
+									if (this.model.node.current.auxProperties['dcterms:type'] == 'Sound') {
+										this.mediaObjectView = new $.HTML5AudioObjectView(this.model, this);
+									} else {
+										this.mediaObjectView = new $.HTML5VideoObjectView(this.model, this);
+									}
 								}
 							break;
 
@@ -1175,7 +1206,6 @@ function YouTubeGetID(url){
 		 * Lays out the media object.
 		 */
 		jQuery.MediaElementView.prototype.layoutMediaObject = function() {
-
 			this.calculateMediaSize();
 			this.mediaObjectView.resize(this.resizedDim.x, this.resizedDim.y);
 
@@ -1545,8 +1575,10 @@ function YouTubeGetID(url){
 		 * Removes the loading message.
 		 */
 		jQuery.MediaElementView.prototype.removeLoadingMessage = function() {
-			this.mediaContainer.parent().parent().css('background-image', 'none');
-			$('body').trigger('mediaElementMediaLoaded', [$(this.model.link)]);
+      if (this.mediaContainer.parent().parent().css('background-image') != 'none') {
+        this.mediaContainer.parent().parent().css('background-image', 'none');
+  			$('body').trigger('mediaElementMediaLoaded', [$(this.model.link)]);
+      }
 		}
 
 		/**
@@ -2867,7 +2899,7 @@ function YouTubeGetID(url){
 		 * Creates the video media object.
 		 */
 		jQuery.HTML5VideoObjectView.prototype.createObject = function() {
-
+			
 			var mimeType;
 			switch (this.model.mediaSource.name) {
 
@@ -2911,6 +2943,10 @@ function YouTubeGetID(url){
 				mimeType = "video/webm";
 				break;
 
+				case "HLS":
+				mimeType = "application/x-mpegURL";
+				var hls = true;
+				break;
 			}
 
 			obj = $('<div class="mediaObject"><video id="'+this.model.filename+'_'+this.model.id+'" controls="controls"><source src="'+this.model.path+'" type="'+mimeType+'"/>Your browser does not support the video tag.</video></div>').appendTo(this.parentView.mediaContainer);
@@ -2959,10 +2995,14 @@ function YouTubeGetID(url){
 					return;
 				}
 
-				me.parentView.intrinsicDim.x = me.video[0].videoWidth;
-				me.parentView.intrinsicDim.y = me.video[0].videoHeight;
-				me.parentView.controllerOffset = 0;
-
+        if (me.parentView.intrinsicDim.x != me.video[0].videoWidth || me.parentView.intrinsicDim.y != me.video[0].videoHeight) {
+          me.parentView.intrinsicDim.x = me.video[0].videoWidth;
+  				me.parentView.intrinsicDim.y = me.video[0].videoHeight;
+  				me.parentView.controllerOffset = 0;
+        }		console.log('metadatafunc');
+				if (hls) {
+					me.video[0].removeEventListener('progress', metadataFunc, false);
+				}
 				me.parentView.layoutMediaObject();
 				me.parentView.removeLoadingMessage();
 
@@ -2971,13 +3011,21 @@ function YouTubeGetID(url){
 			this.parentView.layoutMediaObject();
 
 			if (document.addEventListener) {
-				this.video[0].addEventListener('loadedmetadata', metadataFunc, false);
+				// When streaming HLS in Safari's native player, the data must be loaded before the video's dimensions can be gathered. Mobile Safari requires this be progress.
+				if (hls) {
+					this.video[0].addEventListener('progress', metadataFunc, false);
+				} else {
+					this.video[0].addEventListener('loadedmetadata', metadataFunc, false);
+				}
 				this.video[0].addEventListener('play', me.parentView.startTimer, false);
 				this.video[0].addEventListener('pause', me.parentView.endTimer, false);
 				this.video[0].addEventListener('ended', me.parentView.endTimer, false);
-				this.video[0].addEventListener('ended', me.parentView.endTimer, false);
 			} else {
-				this.video[0].attachEvent('onloadedmetadata', metadataFunc);
+				if (hls) {
+					this.video[0].attachEvent('onprogress', metadataFunc);
+				} else {
+					this.video[0].attachEvent('onloadedmetadata', metadataFunc);
+				}
 				this.video[0].attachEvent('play', me.parentView.startTimer);
 				this.video[0].attachEvent('pause', me.parentView.endTimer);
 				this.video[0].attachEvent('ended', me.parentView.endTimer);
@@ -3140,7 +3188,7 @@ function YouTubeGetID(url){
 
 			}
 
-			obj = $('<div class="mediaObject"><video id="'+this.model.filename+'_'+this.model.id+'"><source src="'+this.model.path+'" type="'+mimeType+'"/>Your browser does not support the video tag.</video></div>').appendTo(this.parentView.mediaContainer);
+			var obj = $('<div class="mediaObject"><video id="'+this.model.filename+'_'+this.model.id+'"><source src="'+this.model.path+'" type="'+mimeType+'"/>Your browser does not support the video tag.</video></div>').appendTo(this.parentView.mediaContainer);
 			if ( this.model.options.autoplay && ( this.model.seek == null ) ) {
 				obj.find( 'video' ).attr( 'autoplay', 'true' );
 			}
@@ -3158,6 +3206,8 @@ function YouTubeGetID(url){
 				me.parentView.layoutMediaObject();
 				me.parentView.removeLoadingMessage();
 
+				me.setupTool();
+
 			}
 
 			if (document.addEventListener) {
@@ -3166,42 +3216,43 @@ function YouTubeGetID(url){
 				this.video[0].attachEvent('onloadedmetadata', metadataFunc);
 			}
 
-			me.setupTool();
-
 			return;
 		}
 
 		jQuery.SemanticAnnotationToolObjectView.prototype.setupTool = function() {
 
-			var dependanciesAddress = $('link#approot').attr('href') + 'views/widgets/waldorf/';
-			var serverAddress = $('link#parent').attr('href');
-			var tagsAddress = "https://onomy.org/published/83/json";
-			var apiKey = "facc287b-2f51-431d-87ec-773e12302fcf";
+			var sat_values = $('.book-title').children('[data-semantic-annotation-tool]').attr('data-semantic-annotation-tool');
+			var sat_arr = sat_values.split(',');
+			var sat_address = (sat_arr[0].length) ? sat_arr[0] : 'https://onomy.org/published/95/json';
+			var sat_language = ('undefined' != typeof(sat_arr[1])) ? sat_arr[1] : 'en';
+			var parent = $('link#parent').attr('href');
+			var $video = this.video.first();
+			// CSS files are loaded in cantaloupe/content.php
 
-			$('head').append('<link rel="stylesheet" href="' + dependanciesAddress + 'jquery-ui-1.12.1.custom/jquery-ui.min.css" type="text/css" />');
-			$('head').append('<link rel="stylesheet" href="' + dependanciesAddress + 'select2.min.css" type="text/css" />');
-			$('head').append('<link rel="stylesheet" href="' + dependanciesAddress + 'annotator-frontend.css" type="text/css" />');
-			$.when(
-				$.getScript(dependanciesAddress + 'jquery-ui-1.12.1.custom/jquery-ui.min.js'),
-				$.getScript(dependanciesAddress + 'select2.min.js'),
-				$.getScript(dependanciesAddress + 'annotator-frontend.js')
-			).done(function(){
-
-				console.log('Booting up Waldorf');
-				var waldorf_callback = function(event) {
-					console.log('Waldorf callback');
-				};
-				waldorf = me.video.first().annotate({
-					serverURL: serverAddress,
-					tagsURL: tagsAddress,
-					apiKey: apiKey,
-					kioskMode: false,
-					cmsUsername: "Scalar Test User",
-					cmsEmail: "wahwho@yahoo.com",
+			var go = function(status) {
+				var isLoggedIn = parseInt(status.is_logged_in);
+				var kioskMode = (isLoggedIn) ? false : true;
+				var username = (isLoggedIn) ? status.fullname : '';
+				var email = (isLoggedIn) ? status.email : '';
+				var waldorf = $video.annotate({
+					serverURL: parent,
+					tagsURL: sat_address,
+					onomyLanguage: sat_language,
+					kioskMode: kioskMode,
+					cmsUsername: username,
+					cmsEmail: email,
 					displayIndex: false,
-					callback: waldorf_callback
+					callback: function(event) {
+						console.log('Waldorf callback');
+					}
 				});
+			}
 
+			// TODO: sometimes $video is undefined, for some reason
+			console.log($video);
+			
+			$.getJSON(parent + 'login_status', function(status) {
+				go(status);
 			});
 
 		}
@@ -3293,6 +3344,245 @@ function YouTubeGetID(url){
 			}
 		}
 
+	}
+
+	/**
+	 * View for the hls.js Audio player to support HTTP Live Streaming.
+	 * @constructor
+	 *
+	 * @param {Object} model		Instance of the model.
+	 * @param {Object} parentView	Primary view for the media element.
+	 */
+	 jQuery.HLSAudioObjectView = function(model, parentView) {
+
+		var me = this;
+
+		this.model = model;				// instance of the model
+		this.parentView = parentView;			// primary view for the media element
+
+		/**
+		 * Creates the hls.js audio media object.
+		 */
+		 jQuery.HLSAudioObjectView.prototype.createObject = function() {
+
+			var HLSObjectId = 'hls_'+this.model.filename+'_'+this.model.id;
+
+			obj = $('<div class="mediaObject"><audio id="'+HLSObjectId+'" style="width:100%;" controls type="application/x-mpegURL">Your browser does not support the audio tag.</audio></div>').appendTo(this.parentView.mediaContainer);
+			if ( this.model.options.autoplay && ( this.model.seek == null ) ) {
+				obj.find( 'audio' ).attr( 'autoplay', 'true' );
+			}
+
+			this.audio = obj.find('audio#'+HLSObjectId);
+
+			this.parentView.controllerOnly = true;
+			this.parentView.controllerHeight = 25;
+
+			this.parentView.intrinsicDim.y = 45;
+
+			// this prevents the top of the player from getting cut off in Firefox
+			if ( scalarapi.scalarBrowser == "Mozilla" ) {
+				obj.find( 'audio' ).height( this.parentView.intrinsicDim.y );
+			}
+
+			this.parentView.layoutMediaObject();
+
+			this.hls = new Hls({autoStartLoad:false,maxBufferSize:30 * 1000 * 1000,});
+			this.hls.loadSource(this.model.path);
+			this.hls.attachMedia(this.audio[0]);
+
+			this.parentView.removeLoadingMessage();
+
+			if (document.addEventListener) {
+				this.audio[0].addEventListener('play', () => { me.parentView.startTimer; this.hls.startLoad(startPosition=-1); }, false);
+				this.audio[0].addEventListener('pause', me.parentView.endTimer, false);
+				this.audio[0].addEventListener('ended', me.parentView.endTimer, false);
+				this.audio[0].addEventListener('ended', me.parentView.endTimer, false);
+			} else {
+				this.audio[0].attachEvent('play', me.parentView.startTimer);
+				this.audio[0].attachEvent('pause', me.parentView.endTimer);
+				this.audio[0].attachEvent('ended', me.parentView.endTimer);
+			}
+
+			return;
+		 }
+
+		 /**
+		 * Starts playback of the audio.
+		 */
+		jQuery.HLSAudioObjectView.prototype.play = function() {
+			if ((this.model.seekAnnotation != null) && (!this.parentView.overrideAutoSeek)) {
+				this.audio[0].currentTime = this.model.seekAnnotation.properties.start;
+			}
+			if (this.audio[0].paused) {
+				this.audio[0].play();
+			}
+		}
+
+		/**
+		 * Pauses playback of the audio.
+		 */
+		jQuery.HLSAudioObjectView.prototype.pause = function() {
+			this.audio[0].pause();
+		}
+
+		/**
+		 * Seeks to the specified location in the audio.
+		 *
+		 * @param {Number} time			Seek location in seconds.
+		 */
+		jQuery.HLSAudioObjectView.prototype.seek = function(time) {
+			this.audio[0].currentTime = time;
+		}
+
+		/**
+		 * Returns the current playback position of the audio.
+		 * @return	The current playback position in seconds.
+		 */
+		jQuery.HLSAudioObjectView.prototype.getCurrentTime = function() {
+			return this.audio[0].currentTime;
+		}
+
+		/**
+		 * Resizes the audio to the specified dimensions.
+		 *
+		 * @param {Number} width		The new width of the media.
+		 * @param {Number} height		The new height of the media.
+		 */
+		jQuery.HLSAudioObjectView.prototype.resize = function(width) {
+			$(this.model.element).find('.mediaObject').width(width);
+		}
+
+		/**
+		 * Returns true if the audio is currently playing.
+		 * @return	Returns true if the audio is playing.
+		 */
+		jQuery.HLSAudioObjectView.prototype.isPlaying = function() {
+			return !this.audio[0].paused;
+		}
+	}
+
+	/**
+	 * View for the hls.js Video player to support HTTP Live Streaming.
+	 * @constructor
+	 *
+	 * @param {Object} model		Instance of the model.
+	 * @param {Object} parentView	Primary view for the media element.
+	 */
+	jQuery.HLSVideoObjectView = function(model, parentView) {
+
+		var me = this;
+
+		this.model = model;				// instance of the model
+		this.parentView = parentView;			// primary view for the media element
+
+		/**
+		 * Creates the hls.js video media object.
+		 */
+		jQuery.HLSVideoObjectView.prototype.createObject = function() {
+
+			var HLSObjectId = 'hls_'+this.model.filename+'_'+this.model.id;
+
+			obj = $('<div class="mediaObject"><video id="'+HLSObjectId+'" controls type="application/x-mpegURL">Your browser does not support the video tag.</video></div>').appendTo(this.parentView.mediaContainer);
+			if ( this.model.options.autoplay && ( this.model.seek == null ) ) {
+				obj.find( 'video' ).attr( 'autoplay', 'true' );
+			}
+
+			this.video = obj.find('video#'+HLSObjectId);
+
+			var thumbnailURL;
+			if (this.model.node.thumbnail) {
+				thumbnailURL = this.model.node.getAbsoluteThumbnailURL();
+			} else if (this.model.node.current.thumbnail) {
+				thumbnailURL = this.model.node.current.thumbnail;
+			}
+
+			if (thumbnailURL != undefined) {
+				this.image = new Image();
+				$(this.image).on('load', function() {
+					var $this = $(this);
+					me.video.attr('poster', $this.attr('src'));
+				}).attr('src', thumbnailURL);
+			}
+
+			this.parentView.controllerOffset = 22;
+
+			var metadataFunc = function() {
+				me.parentView.controllerOffset = 0;
+
+				me.parentView.layoutMediaObject();
+				me.parentView.removeLoadingMessage();
+			}
+
+			this.parentView.layoutMediaObject();
+
+			this.hls = new Hls({autoStartLoad:false,maxBufferSize:30 * 1000 * 1000,});
+			this.hls.loadSource(this.model.path);
+			this.hls.attachMedia(this.video[0]);
+			this.hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
+				me.parentView.intrinsicDim.x = data.levels[data.levels.length -1].width;
+				me.parentView.intrinsicDim.y = data.levels[data.levels.length -1].height;
+				metadataFunc();
+			});
+
+			this.video[0].addEventListener('play', () => { me.parentView.startTimer; this.hls.startLoad(startPosition=-1); }, false);
+			this.video[0].addEventListener('pause', me.parentView.endTimer, false);
+			this.video[0].addEventListener('ended', me.parentView.endTimer, false);
+
+			return;
+		}
+
+		jQuery.HLSVideoObjectView.prototype.play = function() {
+			if ((this.model.seekAnnotation != null) && (!this.parentView.overrideAutoSeek)) {
+				this.video[0].currentTime = this.model.seekAnnotation.properties.start;
+			}
+			if (this.video[0].paused) {
+				this.video[0].play();
+			}
+		}
+
+		jQuery.HLSVideoObjectView.prototype.pause = function() {
+			if (this.video) {
+				this.video[0].pause();
+			}
+		}
+
+		/**
+		 * @param {Number} time
+		 */
+		 jQuery.HLSVideoObjectView.prototype.seek = function(time) {
+			if (this.video[0]) {
+				this.video[0].currentTime = time;
+			}
+		}
+
+		/**
+		 * @return
+		 */
+ 		jQuery.HLSVideoObjectView.prototype.getCurrentTime = function() {
+			if (this.video[0]) {
+				return this.video[0].currentTime;
+			}
+		}
+
+		/**
+		 * @param {Number} width
+		 * @param {Number} height
+		 */
+		jQuery.HLSVideoObjectView.prototype.resize = function(width, height) {
+			if (this.video) {
+				this.video[0].width = width;
+				this.video[0].height = height;
+			}
+		}
+
+		/**
+		 * @return
+		 */
+		jQuery.HLSVideoObjectView.prototype.isPlaying = function() {
+			if (this.video) {
+				return !this.video[0].paused;
+			}
+		}
 	}
 
 	/**
@@ -3421,7 +3711,14 @@ function YouTubeGetID(url){
 		 */
 		jQuery.HTML5AudioObjectView.prototype.createObject = function() {
 
-			obj = $('<div class="mediaObject"><audio style="width:100%;" src="'+this.model.path+'" controls="controls" type="audio/'+this.model.extension+'">Your browser does not support the audio tag.</audio></div>').appendTo(this.parentView.mediaContainer);
+			var mimeType;
+			if (this.model.mediaSource.name == 'HLS') {
+				mimeType = 'application/x-mpegURL';
+			} else {
+				mimeType = 'audio/'+this.model.extension;
+			}
+
+			obj = $('<div class="mediaObject"><audio style="width:100%;" src="'+this.model.path+'" controls="controls" type="'+mimeType+'">Your browser does not support the audio tag.</audio></div>').appendTo(this.parentView.mediaContainer);
 			if ( this.model.options.autoplay && ( this.model.seek == null ) ) {
 				obj.find( 'audio' ).attr( 'autoplay', 'true' );
 			}
@@ -3563,10 +3860,7 @@ function YouTubeGetID(url){
 				playerVars: playerVars,
 				events: {
 					'onStateChange': 'onYouTubeStateChange' + this.model.id
-				},
-        playerVars: {
-            wmode: "opaque"
-        }
+				}
 			}
 
 			if ( this.model.initialSeekAnnotation != null ) {
@@ -3971,6 +4265,14 @@ function YouTubeGetID(url){
 
 				//Convert code elements to ordered lists
 				code.html("<ol class='plain'>" + code.html().replace(/\n/g, "<li>").trim() + "</ol>");
+
+  			//Added styling to make text media feel a bit more like code media (sizing, padding, etc.)
+  			$('#'+this.frameId).contents().find('body ol').css({
+  					'color': 'black',
+  					'text-shadow': '0',
+  					'font-size': '13px',
+  					'padding':'13px 0px'
+  			}).find('li').css('padding','0 13px 0 49.4px');
 			}
 
 			code.find('li').each(function() {
@@ -3978,14 +4280,6 @@ function YouTubeGetID(url){
 			});
 
 			$('#'+this.frameId)[0].contentWindow.document.body.innerHTML = code.html();
-
-			//Added styling to make text media feel a bit more like code media (sizing, padding, etc.)
-			$('#'+this.frameId).contents().find('body ol').css({
-					'color': 'black',
-					'text-shadow': '0',
-					'font-size': '13px',
-					'padding':'13px 0px'
-			}).find('li').css('padding','0 13px 0 49.4px');
 
 			var approot = $('link#approot').attr('href');
 			var cssLink = document.createElement("link")
@@ -4526,7 +4820,7 @@ function YouTubeGetID(url){
 
 			this.frameId = 'pdf'+this.model.filename+'_'+this.model.id;
 
-			var obj = $('<div class="mediaObject"><object type="application/pdf" style="width: 100%; height: 100%;" id="'+this.frameId+'" data="'+this.model.path+'"><p class="download_link"><a href="'+this.model.path+'">Download PDF</a></p></object></div>').appendTo(this.parentView.mediaContainer);
+      var obj = $('<div class="mediaObject"><iframe style="width: 100%; height: 100%;" id="'+this.frameId+'" src="'+this.model.path+'"></iframe></div>').appendTo(this.parentView.mediaContainer);
 			this.frame = obj.find('#'+this.frameId)[0];
 
 			this.parentView.layoutMediaObject();

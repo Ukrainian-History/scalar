@@ -28,11 +28,27 @@ isMac = navigator.userAgent.indexOf('Mac OS X') != -1;
 		// Options
 		var self = this;
 		var $this = $(this);
+		var body = $('iframe.cke_wysiwyg_frame').contents().find('body');
+		var resource = opts.node.slug;
+		var isInlineMedia = opts.data['text-wrap'] != null;
+		var sameMediaLinks = body.find('a[resource="'+resource+'"]');
+		var isFirstInstance = (sameMediaLinks[0] == opts.element.$) || (sameMediaLinks.length == 0);
+		var instanceIndex = sameMediaLinks.index(opts.element.$);
+		var priorInstance = sameMediaLinks[0];
+		var isOnlyInstance = sameMediaLinks.length == 1 && isFirstInstance;
+		if (isOnlyInstance) {
+			priorInstance = null;
+		} else {
+			sameMediaLinks.each(function(i) {
+				if (!this.getAttribute('data-use-prior') && i < instanceIndex) {
+					priorInstance = this;
+				}
+			});
+		}
 		var options = {};
 		var mediaType = '';
 		if (typeof opts.data['type'] !== 'undefined') {
 			mediaType = opts.data['type'];
-			delete opts.data['type'];
 		}
 		if ('undefined' == typeof(opts.data) || $.isEmptyObject(opts.data)) {
 			opts.callback(options);
@@ -56,8 +72,25 @@ isMac = navigator.userAgent.indexOf('Mac OS X') != -1;
 			return str.replace(/-/g, ' ');
 		}
 		// Create the modal
-		var dialog_title = mediaType == '' ? 'Media formatting options' : mediaType + ' media formatting options';
-		if (!opts.isMedia) dialog_title = 'Formatting options';
+		var dialog_title;
+		switch (mediaType) {
+
+			case '':
+			dialog_title = 'Media formatting options';
+			break;
+
+			default:
+			if (opts.isMedia) {
+				dialog_title = mediaType + ' media formatting options';
+			} else {
+				if (opts.element.hasClass('inlineNote')) {
+					dialog_title = 'Inline note formatting options';
+				} else {
+					dialog_title = 'Formatting options';
+				}
+			}
+			break;
+		}
 		bootbox.dialog({
 			message: '<div id="bootbox-media-options-content" class="heading_font"></div>',
 			title: dialog_title,
@@ -74,12 +107,12 @@ isMac = navigator.userAgent.indexOf('Mac OS X') != -1;
 		var node = typeof opts.node.current != 'undefined' ? opts.node.current : opts.node;
 		var $media_preview = $('<div class="row selectedItemPreview"><div class="col-xs-3 col-sm-4 col-md-3 left mediaThumbnail"></div><div class="col-xs-9 col-sm-8 col-md-9 right"><strong class="mediaTitle">' + node.title + '</strong><p class="mediaDescription"></p><div class="link"></div></div></div><hr />');
 		var thumbnail = undefined;
-		if (!opts.isMedia) {
-			thumbnail = $('link#approot').attr('href')+'views/melons/cantaloupe/images/widget_image_note.png';
-		} else if (typeof opts.node.thumbnail != 'undefined' && opts.node.thumbnail != null) {
-			thumbnail = opts.node.thumbnail;
-		} else if (typeof opts.node.content != 'undefined' && opts.node.content['http://simile.mit.edu/2003/10/ontologies/artstor#thumbnail'] != 'undefined' && opts.node.content['http://simile.mit.edu/2003/10/ontologies/artstor#thumbnail'] != null) {
-			thumbnail = opts.node.content['http://simile.mit.edu/2003/10/ontologies/artstor#thumbnail'][0].value;
+		if (opts.isMedia) {
+			if (typeof opts.node.thumbnail != 'undefined' && opts.node.thumbnail != null) {
+				thumbnail = opts.node.thumbnail;
+			} else if (typeof opts.node.content != 'undefined' && opts.node.content['http://simile.mit.edu/2003/10/ontologies/artstor#thumbnail'] != 'undefined' && opts.node.content['http://simile.mit.edu/2003/10/ontologies/artstor#thumbnail'] != null) {
+				thumbnail = opts.node.content['http://simile.mit.edu/2003/10/ontologies/artstor#thumbnail'][0].value;
+			}
 		}
 		var description = '';
 		if (typeof node.description == 'string' && node.description != '') {
@@ -102,14 +135,16 @@ isMac = navigator.userAgent.indexOf('Mac OS X') != -1;
 			$media_preview.find('.mediaThumbnail').remove();
 			$media_preview.find('.right').removeClass('col-sm-8 col-md-9');
 		}
-		$('<a href="#">Change Selected Media</a>').data('element', opts.element).on('click', function(e) {
-			e.preventDefault();
-			e.stopPropagation();
-			var element = $(this).data('element');
-			var data = $(element.$).data('selectOptions');
-			data.forceSelect = true;
-			CKEDITOR._scalar.selectcontent(data);
-		}).appendTo($media_preview.find('.right .link'));
+		if (opts.isMedia) {
+			$('<a href="#">Change Selected Media</a>').data('element', opts.element).on('click', function(e) {
+				e.preventDefault();
+				e.stopPropagation();
+				var element = $(this).data('element');
+				var data = $(element.$).data('selectOptions');
+				data.forceSelect = true;
+				CKEDITOR._scalar.selectcontent(data);
+			}).appendTo($media_preview.find('.right .link'));
+		}
 
 		$form.append($media_preview);
 
@@ -126,13 +161,42 @@ isMac = navigator.userAgent.indexOf('Mac OS X') != -1;
 		if (opts.element.hasClass('wrap')) {
 			text_wrap = true;
 		}
-		for (var option_name in opts.data) {
-			if (option_name != 'annotations' && option_name != 'node') {
-				var $option = $('<div class="form-group"><label class="col-sm-3 control-label" style="white-space:nowrap;">' + ucwords(dash_to_space(option_name)) + ': </label><div class="col-sm-9"><select class="btn btn-default" name="' + option_name + '"></select></div></div>');
-				for (var j = 0; j < opts.data[option_name].length; j++) {
 
+		if (!isFirstInstance && !isInlineMedia) {
+			$form.append('<div class="form-group">' +
+				'<div class="col-sm-3"></div>' +
+				'<div class="col-sm-9">The media above has previously been used on this page.</div>' +
+			'</div>' +
+			'<div class="form-group">' +
+				'<div class="col-sm-3"></div>' +
+				'<div class="col-sm-9"><label><input id="use-prior-media-checkbox" type="checkbox" checked> Use existing media instance</label>' +
+			'</div>');
+		}
+
+		if (opts.element.getAttribute('data-use-prior')) {
+			$('#use-prior-media-checkbox').prop('checked', true);
+		} else {
+			$('#use-prior-media-checkbox').prop('checked', false);
+		}
+
+		var usePriorInstance = $('#use-prior-media-checkbox').prop('checked');
+
+		$('#use-prior-media-checkbox').on('change', function() {
+			usePriorInstance = $('#use-prior-media-checkbox').prop('checked');
+			if (usePriorInstance) {
+				$('.form-group.instance-option').addClass('hidden');
+			} else {
+				$('.form-group.instance-option').removeClass('hidden');
+			}
+		})
+
+		for (var option_name in opts.data) {
+			if (option_name != 'annotations' && option_name != 'node' && option_name != 'type') {
+				var $option = $('<div class="form-group instance-option"><label class="col-sm-3 control-label" style="white-space:nowrap;">' + ucwords(dash_to_space(option_name)) + '</label><div class="col-sm-9"><select class="form-control" name="' + option_name + '"></select></div></div>');
+				for (var j = 0; j < opts.data[option_name].length; j++) {
 					$option.find('select:first').append('<option value="' + opts.data[option_name][j] + '">' + (option_name == 'text-wrap' ? sentenceCase(dash_to_space(opts.data[option_name][j])) : ucwords(dash_to_space(opts.data[option_name][j]))) + '</option>');
 				}
+				if (usePriorInstance) $option.addClass('hidden');
 				$form.append($option);
 				if (option_name == 'text-wrap') {
 					$option.find('select').on('change', function() {
@@ -153,6 +217,7 @@ isMac = navigator.userAgent.indexOf('Mac OS X') != -1;
 				}
 			}
 		}
+
 		if (text_wrap) {
 			if ($('select[name="align"]').val() == "center") {
 				$('select[name="align"]').val("left");
@@ -160,11 +225,33 @@ isMac = navigator.userAgent.indexOf('Mac OS X') != -1;
 			$('select[name="align"] option[value="center"]').hide();
 		}
 		if (hasAnnotationOption) {
-			var $annotationSelection = $('<div class="annotationContainer"><div class="bg-info" style="padding:1rem;margin-bottom:1rem">This media has annotations. Select which annotations (if any) you want to be displayed.</div><div class="form-group">' +
-				'<label class="col-sm-3 control-label">Annotations: </label>' +
-				'<div class="col-sm-9 annotationSelection"><div class="annotationTableWrapper"><table class="table table-fixed table-striped table-hover"><thead><tr><th class="col-xs-3 text-center">&nbsp;&nbsp;<a href="#" class="annotationSelectionShowAll text-muted"><i class="glyphicon glyphicon-eye-open"></a></th><th class="col-xs-9">Annotation Title</th></tr></thead><tbody></tbody></table></div>' +
-				'</div></div><div class="featuredAnnotation"><div class="form-group"><div class="col-xs-12">Choose an annotation to be highlighted when the page loads, or select \'None\'.</div>' +
-				'<label class="col-sm-3 control-label">Featured Annotation:</label><div class="col-sm-9"><select><option value="none" class="none">None</option></select></div></div>');
+			var $annotationSelection = $('<div class="annotationContainer">' +
+				'<div class="form-group">' +
+					'<div class="col-sm-3"></div>' +
+					'<div class="col-sm-9" id="annotation-info">This media has annotations. Select which annotations (if any) you want to be displayed.<br/></div>' +
+				'</div>' +
+				'<div class="form-group">' +
+					'<label class="col-sm-3 control-label">Annotations</label>' +
+					'<div class="col-sm-9 annotationSelection">' +
+						'<div class="annotationTableWrapper">' +
+							'<table class="table table-fixed table-striped table-hover">' +
+								'<thead><tr><th class="col-xs-3 text-center">&nbsp;&nbsp;<a href="#" class="annotationSelectionShowAll text-muted"><i class="glyphicon glyphicon-eye-open"></a></th><th class="col-xs-9">Annotation Title</th></tr></thead>' +
+								'<tbody></tbody>' +
+							'</table>' +
+						'</div>' +
+					'</div>' +
+				'</div>');
+
+			$annotationSelection.append('<div class="featuredAnnotation">' +
+				'<div class="form-group">' +
+					'<div class="col-sm-3"></div>' +
+					'<div class="col-sm-9">Choose an annotation to be featured, or select \'None\'.</div>' +
+				'</div>' +
+				'<div class="form-group">' +
+					'<label class="col-sm-3 control-label">Featured</label>' +
+					'<div class="col-sm-9"><select class="form-control"><option value="none" class="none">None</option></select></div>' +
+				'</div>' +
+			'</div>');
 
 			$annotationSelection.find('.annotationSelectionShowAll').on('click', function(e) {
 				e.preventDefault();
@@ -189,7 +276,7 @@ isMac = navigator.userAgent.indexOf('Mac OS X') != -1;
 						var node = scalarapi.getNode(slug);
 						var annotated_by = node.getRelatedNodes('annotation', 'incoming');
 						if (annotated_by.length == 0) {
-							$annotationSelection.find('div.bg-info, .featuredAnnotation').remove();
+							$annotationSelection.find('#annotation-info, .featuredAnnotation').remove();
 							$annotationSelection.find('.annotationSelection').html('<p class="text-muted">This media does not contain any annotations.</p>');
 							return;
 						}
@@ -302,16 +389,53 @@ isMac = navigator.userAgent.indexOf('Mac OS X') != -1;
 				for (var i = 0; i < $selectedAnnotations.length; i++) {
 					annotations.push($selectedAnnotations.eq(i).data('slug'));
 				}
+				if (!isInlineMedia) {
+					if (usePriorInstance) {
+						// add any annnotations selected here to the prior instance
+						var instanceAnnotations = priorInstance.getAttribute('data-annotations').split(',');
+						for (var i=0; i<annotations.length; i++) {
+							if (instanceAnnotations.indexOf(annotations[i]) == -1) {
+								instanceAnnotations.push(annotations[i]);
+							}
+						}
+						priorInstance.setAttribute('data-annotations', instanceAnnotations.join(','));
+					} else {
+						// add any annotations from following media links that may depend on this instance
+						var instanceIndex = sameMediaLinks.index(opts.element.$);
+						for (var i=instanceIndex+1; i<sameMediaLinks.length; i++) {
+							if (sameMediaLinks[i].getAttribute('data-use-prior')) {
+								// note that if this is a newly created media link we don't actually know
+								// if this is a later instance or not
+								var laterInstanceAnnotations = sameMediaLinks[i].getAttribute('data-annotations').split(',');
+								for (var j=0; j<laterInstanceAnnotations.length; j++) {
+									if (annotations.indexOf(laterInstanceAnnotations[j]) == -1) {
+										annotations.push(laterInstanceAnnotations[j]);
+									}
+								}
+							} else if (instanceIndex != -1) {
+								// if this is a newly created media link don't exit (since we don't know
+								// where it's located in the dom), just grab all of
+								// the referenced annotations and add them to the link
+								break;
+							}
+						}
+					}
+				}
 				data_fields['annotations'] = annotations.length > 0 ? annotations.join(',') : '';
+
 				if ($('#bootbox-media-options-content').find('.featuredAnnotation select').val() != 'none' && $('#bootbox-media-options-content').find('.featuredAnnotation select').is(':visible')) {
 					data_fields['featured_annotation'] = $('#bootbox-media-options-content').find('.featuredAnnotation select').val();
 				}
+			}
+			if ($('#use-prior-media-checkbox').is(":checked")) {
+				data_fields['use-prior'] = true;
 			}
 			if ($form.closest('.media_options_bootbox').length) {
 				$form.closest('.media_options_bootbox').modal('hide').data('bs.modal', null);
 			} else {
 				$this.remove();
 			}
+
 			opts.callback(data_fields);
 		});
 	};
@@ -1376,6 +1500,11 @@ isMac = navigator.userAgent.indexOf('Mac OS X') != -1;
 				icon: "widget_image_visualization.png"
 			},
 			{
+				name: "Lens",
+				description: "Living snapshots of the content of a book, visualizing dynamic selections of pages and media.",
+				icon: "widget_image_lens.png"
+			},
+			{
 				name: "Map",
 				description: "Geographic view that plots geotagged Scalar content on a map (uses Google Maps).",
 				icon: "widget_image_map.png"
@@ -1396,15 +1525,6 @@ isMac = navigator.userAgent.indexOf('Mac OS X') != -1;
 				icon: "widget_image_summary.png"
 			}
 		];
-
-		var lenses_are_active = ('true' == $('link#lenses_are_active').attr('href')) ? true : false;
-		if (lenses_are_active) {
-			widget_types.splice(2, 0, {
-				name: "Lens",
-				description: "Living snapshots of the content of a book, visualizing dynamic selections of pages and media.",
-				icon: "widget_image_lens.png"
-			});
-		}
 
 		for (var i = 0; i < widget_types.length; i++) {
 			var widget = widget_types[i];
@@ -1625,6 +1745,7 @@ isMac = navigator.userAgent.indexOf('Mac OS X') != -1;
 			name: 4,
 			description: 6,
 			url: 4,
+			email: 4,
 			homepage: 4,
 			preview: 2,
 			include_children: 2,
@@ -1649,7 +1770,7 @@ isMac = navigator.userAgent.indexOf('Mac OS X') != -1;
 			"rec": 0,
 			"ref": 0,
 			"defaultType": 'composite',
-			"types": ['composite', 'media', 'path', 'tag', 'annotation', 'reply', 'lens', 'term'],
+			"types": ['composite', 'media', 'path', 'tag', 'annotation', 'reply', 'lens', 'hidden'],  /* 'term' */
 			"resultsPerPage": 50,
 			"allowChildren": false,
 			"selected": [],
@@ -2062,6 +2183,10 @@ isMac = navigator.userAgent.indexOf('Mac OS X') != -1;
 								break;
 							case 'url':
 								rowHTML += '<td class="' + ((-1 != opts.editable.indexOf(col)) ? ' editable' : '') + '" data-width="' + fieldWidths[col] +'">/' + item.slug + '</td>';
+								break;
+							case 'email': // foaf:homepage
+								var email = ('undefined' != typeof(item.content['http://xmlns.com/foaf/0.1/mbox']) && item.content['http://xmlns.com/foaf/0.1/mbox'][0].value.length) ? item.content['http://xmlns.com/foaf/0.1/mbox'][0].value : '<i>Emails are suppressed</i>';
+								rowHTML += '<td class="' + ((-1 != opts.editable.indexOf(col)) ? ' editable' : '') + '" data-width="' + fieldWidths[col] +'">' + email + '</td>';
 								break;
 							case 'homepage': // foaf:homepage
 								var homepage = ('undefined' != typeof(item.content['http://xmlns.com/foaf/0.1/homepage']) && item.content['http://xmlns.com/foaf/0.1/homepage'][0].value.length) ? item.content['http://xmlns.com/foaf/0.1/homepage'][0].value : '';
@@ -2885,7 +3010,7 @@ isMac = navigator.userAgent.indexOf('Mac OS X') != -1;
 		};
 
 		$nodeSelectorTableBody.on('scroll', function() {
-			if ($(this).scrollTop() + $(this).innerHeight() >= $(this)[0].scrollHeight && !lastPage) {
+			if (Math.ceil($(this).scrollTop() + $(this).innerHeight()) >= $(this)[0].scrollHeight && !lastPage) {
 				var promise = $.Deferred();
 				var $dialogue_container = $(this).parents('.node_selector');
 				var opts = $dialogue_container.data('opts');

@@ -199,7 +199,7 @@ class Book extends MY_Controller {
 
 		header('Content-type: application/json');
 		if ($this->data['login']->is_logged_in) {
-			echo '{"is_logged_in":1,"is_author":'.(($this->login_is_book_admin())?'1':'0').',"user_id":'.$this->data['login']->user_id.',"fullname":"'.htmlspecialchars($this->data['login']->fullname).'"}';
+			echo '{"is_logged_in":1,"is_author":'.(($this->login_is_book_admin())?'1':'0').',"user_id":'.$this->data['login']->user_id.',"fullname":"'.htmlspecialchars($this->data['login']->fullname).'","email":"'.htmlspecialchars($this->data['login']->email).'"}';
 			exit;
 		} else {
 			die('{"is_logged_in":0}');
@@ -588,6 +588,16 @@ class Book extends MY_Controller {
 
 			default:
 
+				// If Airtable, get special fields
+				if ('airtable' == $archive) {
+					$name = $this->uri->segment(4);
+					$airtables = $this->config->item('airtable');
+					foreach ($airtables as $airtable) {
+						if ($airtable['name'] != $name) continue;
+						$this->data['airtable'] = $airtable;
+					}
+				}
+				
 				// Translate the import URL to information about the archive
 				$archive_title = str_replace('_',' ',$archive);
 				$archives_rdf_url = confirm_slash(APPPATH).'rdf/xsl/archives.rdf';

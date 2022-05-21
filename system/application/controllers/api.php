@@ -106,7 +106,7 @@ Class Api extends CI_Controller {
  		if (empty($this->data['book'])) $this->_output_error(StatusCodes::HTTP_NOT_FOUND, 'Could not find book');
 
  		//Session login first
- 		if ($this->data['native']==='true'){
+ 		if ($this->data['native']===true || $this->data['native']==='true'){
  			$this->user = $this->api_users->do_session_login($this->data['book']->book_id);
  			if (!$this->user && $this->api_users->is_super()) $this->_output_error(StatusCodes::HTTP_UNAUTHORIZED, 'You do not have permission to modify this book');
  			if (!$this->user) $this->_output_error(StatusCodes::HTTP_UNAUTHORIZED, 'You are not logged in');
@@ -115,9 +115,6 @@ Class Api extends CI_Controller {
  			$this->_output_error(StatusCodes::HTTP_UNAUTHORIZED, 'Could not log in via API key');
  		}
  		$this->_fill_user_session_data();
-
- 		//Determine if the incoming request has a payload (JSON blob) and convert to post fields if available
- 		$this->_payload_to_data($this->data['book']);
 
  		//Propagate allowable prefixes
  		$ontologies = $this->config->item('ontologies');
@@ -129,6 +126,9 @@ Class Api extends CI_Controller {
  		$this->tklabels = $this->_tklabels($this->user->book_id);
  		if (!isset($this->tklabels['labels'])) $this->tklabels = null;
  		if (!empty($this->tklabels)) array_push($this->allowable_metadata_prefixes, 'tk');
+ 		
+ 		//Determine if the incoming request has a payload (JSON blob) and convert to post fields if available
+ 		$this->_payload_to_data($this->data['book']);
 	}
 
 	/**
@@ -154,7 +154,7 @@ Class Api extends CI_Controller {
 	 * Adds a new page and version.  This function requires that the new content have some relationship to
 	 * existing content elsewhere in the book.
 	 */
-	public function add(){
+	public function add($output=true){
 		$this->load->model('page_model', 'pages');
 		$this->load->model('version_model', 'versions');
 		$this->load->model('book_model', 'books');
@@ -167,8 +167,8 @@ Class Api extends CI_Controller {
 			$this->_output_error(StatusCodes::HTTP_UNAUTHORIZED);
 		}
 
-    // if the content is a iiif resource, try to get the thumbnail & dc:terms metadata
-    $this->_load_iiif_data();
+    	// if the content is a iiif resource, try to get the thumbnail & dc:terms metadata
+    	$this->_load_iiif_data();
 
 		//save the content entry
 		$save_content = $this->_array_remap_content();
@@ -184,14 +184,14 @@ Class Api extends CI_Controller {
 		$row = $this->versions->get($this->data['version_id']);
 		$this->data['content'] = array($this->versions->get_uri($this->data['version_id'])=>$this->versions->rdf($row));
 
-		$this->_output();
+		if ($output) $this->_output();
 	}
 
 	/**
 	 * Relates a passed child and parent (should it really be subject and object?)
 	 * Won't modify either node
 	 */
-	public function relate(){
+	public function relate($output=true){
 		$this->load->model('page_model', 'pages');
 		$this->load->model('version_model', 'versions');
 
@@ -209,19 +209,22 @@ Class Api extends CI_Controller {
 		$row = $this->versions->get($this->data['version_id']);
 		$this->data['content'] = array($this->versions->get_uri($this->data['version_id'])=>$this->versions->rdf($row));
 
-		$this->_output();
+		if ($output) $this->_output();
 	}
 
 	/**
 	 * Updates an existing page and creates a new version to go with it
 	 */
 
-	public function update(){
+	public function update($output=true){
 		$this->load->model('page_model', 'pages');
 		$this->load->model('version_model', 'versions');
 
 		//parse data
 		$this->_load_update_data();
+
+		// if the content is a iiif resource, try to get the thumbnail & dc:terms metadata
+		$this->_load_iiif_data();
 
 		//validate and save the content entry
 		$save_content = $this->_array_remap_content_update();
@@ -237,7 +240,7 @@ Class Api extends CI_Controller {
 		$row = $this->versions->get($this->data['version_id']);
 		$this->data['content'] = array($this->versions->get_uri($this->data['version_id'])=>$this->versions->rdf($row));
 
-		$this->_output();
+		if ($output) $this->_output();
 	}
 
 	/**
@@ -245,7 +248,7 @@ Class Api extends CI_Controller {
 	 * This may be an unexpected behavior, but is kept this way because the API ignores not live content
 	 * and should not have permission to truly delete anything
 	 */
-	public function delete($set_live_to=false){
+	public function delete($set_live_to=false, $output=true){
 		//load models
 		$this->load->model('page_model', 'pages');
 		$this->load->model('version_model', 'versions');
@@ -264,7 +267,7 @@ Class Api extends CI_Controller {
 		$row = $this->versions->get($this->data['version_id']);
 		$this->data['content'] = array($this->versions->get_uri($this->data['version_id'])=>$this->versions->rdf($row));
 
-		$this->_output();
+		if ($output) $this->_output();
 	}
 
 	/**
@@ -276,8 +279,8 @@ Class Api extends CI_Controller {
 
 	/** Private Functions **/
 
-        /**
-	*  If the data being uploaded is a IIIF resource, get the thumbnail
+   /**
+	* If the data being uploaded is a IIIF resource, get the thumbnail
 	* and other metadata from the iiif json itself.
 	**/
 	private function _load_iiif_data(){
@@ -285,7 +288,9 @@ Class Api extends CI_Controller {
 			$iiif_metadata_array = $this->_get_IIIF_metadata($this->data['scalar:url']);
 			if($iiif_metadata_array !== false){
 				foreach ($iiif_metadata_array as $key => $value){
-					$this->data[$key] = $value;
+					if (empty($this->data[$key])){
+						$this->data[$key] = $value;
+					}
 				}
 			}
 		}
@@ -313,6 +318,7 @@ Class Api extends CI_Controller {
 	 */
 	private function _output(){
 
+		if (empty($this->data['format'])) $this->data['format'] = 'json';
 		$this->data['content'] = $this->_rdf_serialize($this->data['content'], $this->config->item('RDF_vocab_prefix'));
 		$this->template->write_view('content', 'modules/data/'.$this->data['format'], $this->data);
 		$this->template->render();
@@ -574,12 +580,12 @@ Class Api extends CI_Controller {
 		return $save;
 	}
 
-        /**
+	/**
 	* _get_IIIF_metadata takes IIIF manifest url, and returns associative array of metadata.
 	* Otherwise, it will return False
 	* @return array
 	*/
-        private function _get_IIIF_metadata($url=''){
+	private function _get_IIIF_metadata($url=''){
 		$ontologies = $this->config->item('ontologies');
         $dc_check_fields = array_diff($ontologies['dcterms'], array('title', 'description', 'license'));
 		$formated_check_fields = array_combine($dc_check_fields, array_map('strtolower', $dc_check_fields));
@@ -726,6 +732,73 @@ Class Api extends CI_Controller {
 
 		return $parent_id;
 	}
+	
+	private function _versions_copy_relations($old_version_id=0, $new_version_id=0, $exempt_types=array()) {
+		
+		$this->load->model('annotation_model', 'annotations');
+		$this->load->model('path_model', 'paths');
+		$this->load->model('tag_model', 'tags');
+		$this->load->model('reply_model', 'replies');
+		$this->load->model('reference_model', 'references');
+		
+		$rel_types = array_merge($this->config->item('rel'), $this->config->item('ref'));
+		foreach ($rel_types as $rel_type) {
+			if (in_array($rel_type, $exempt_types)) continue;
+			switch($rel_type) {
+				case 'annotations':
+					$children = $this->annotations->get_children($old_version_id);
+					foreach ($children as $child) {
+						$this->annotations->save_children($new_version_id, array($child->child_version_id), array($child->start_seconds), array($child->end_seconds), array($child->start_line_num), array($child->end_line_num), array($child->points), array($child->position_3d));
+					}
+					$parents = $this->annotations->get_parents($old_version_id);
+					foreach ($parents as $parent) {
+						$this->annotations->save_parents($new_version_id, array($parent->parent_version_id), array($parent->start_seconds), array($parent->end_seconds), array($parent->start_line_num), array($parent->end_line_num), array($parent->points), array($parent->position_3d));
+					}
+					break;
+				case 'paths':
+					$children = $this->paths->get_children($old_version_id);
+					foreach ($children as $child) {
+						$this->paths->save_children($new_version_id, array($child->child_version_id), array($child->sort_number));
+					}
+					$parents = $this->paths->get_parents($old_version_id);
+					foreach ($parents as $parent) {
+						$this->paths->save_parents($new_version_id, array($parent->parent_version_id), array($parent->sort_number));
+					}
+					break;
+				case 'tags':
+					$children = $this->tags->get_children($old_version_id);
+					foreach ($children as $child) {
+						$this->tags->save_children($new_version_id, array($child->child_version_id));
+					}
+					$parents = $this->tags->get_parents($old_version_id);
+					foreach ($parents as $parent) {
+						$this->tags->save_parents($new_version_id, array($parent->parent_version_id));
+					}
+					break;
+				case 'replies':
+					$children = $this->replies->get_children($old_version_id);
+					foreach ($children as $child) {
+						$this->replies->save_children($new_version_id, array($child->child_version_id), array($child->paragraph_num), array($child->datetime));
+					}
+					$parents = $this->replies->get_parents($old_version_id);
+					foreach ($parents as $parent) {
+						$this->replies->save_parents($new_version_id, array($parent->parent_version_id), array($parent->paragraph_num), array($parent->datetime));
+					}
+					break;
+				case 'references':
+					$children = $this->references->get_children($old_version_id);
+					foreach ($children as $child) {
+						$this->references->save_children($new_version_id, array($child->child_version_id), array($child->reference_text));
+					}
+					$parents = $this->references->get_parents($old_version_id);
+					foreach ($parents as $parent) {
+						$this->references->save_parents($new_version_id, array($parent->parent_version_id), array($parent->reference_text));
+					}
+					break;
+			}
+ 		}
+		
+	}
 
 	private function _fill_user_session_data(){
 		if($this->user){
@@ -780,9 +853,21 @@ Class Api extends CI_Controller {
 		$json = json_decode($request_body, true);
 		if (!$json) return false;
 		if (!isset($json[0])) $json = array($json);
+		
+		// IIIF from the Semantic Annotation Tool
+		if (isset($json[0]['@context']) && is_array($json[0]['@context']) && 'http://www.w3.org/ns/anno.jsonld' == $json[0]['@context'][0] && 'http://iiif.io/api/presentation/3/context.json' == $json[0]['@context'][1]) {
+			$_POST['native'] = 'true';
+			$_POST['action'] = 'ADD';
+			if (isset($json[0]['service']) && isset($json[0]['service'][0]) && isset($json[0]['service'][0]['items'])) {
+				$_POST["native"] = (isset($json[0]['service'][0]['items']['native']) && $json[0]['service'][0]['items']['native']) ? true : false;
+				$_POST["id"] = (isset($json[0]['service'][0]['items']['id'])) ? $json[0]['service'][0]['items']['id'] : '';
+				$_POST["api_key"] = (isset($json[0]['service'][0]['items']['api_key'])) ? $json[0]['service'][0]['items']['api_key'] : '';
+				$_POST["action"] = (isset($json[0]['service'][0]['items']['action'])) ? strtoupper($json[0]['service'][0]['items']['action']) : '';
+				$_POST["format"] = (isset($json[0]['service'][0]['items']['format'])) ? $json[0]['service'][0]['items']['format'] : 'json';
+			}
 
 		// OAC from Semantic Annotation Tool
-		if (isset($json[0]['@context']) && 'http://www.w3.org/ns/anno.jsonld' == $json[0]['@context']) {
+		} elseif (isset($json[0]['@context']) && 'http://www.w3.org/ns/anno.jsonld' == $json[0]['@context']) {
 			$_POST['native'] = 'true';
 			$_POST['action'] = 'ADD';
 			if (isset($json[0]['request']) && isset($json[0]['request']['items'])) {
@@ -812,10 +897,74 @@ Class Api extends CI_Controller {
 		if (false === $json) return false;
 		if (!isset($json[0])) $json = array($json);
 
+		// IIIF from the Semantic Annotation Tool
+		if (isset($json[0]['@context']) && is_array($json[0]['@context']) && 'http://www.w3.org/ns/anno.jsonld' == $json[0]['@context'][0] && 'http://iiif.io/api/presentation/3/context.json' == $json[0]['@context'][1]) {
+			$this->load->model('annotation_model', 'annotations');
+			$this->load->library('IIIF_Object','iiif_object');
+			$annotations = $this->iiif_object->decode_annotations($json[0], $book);
+			for ($j = 0; $j < count($annotations); $j++) {
+				$_POST = $annotations[$j];
+				$this->data = array();
+				if ($annotations[$j]['action'] == 'add') {
+					$this->add(false);
+				} elseif ($annotations[$j]['action'] == 'delete') {
+					$this->delete(false, false);
+				} elseif ($annotations[$j]['action'] == 'update') {
+					$arr = explode(':', $_POST['scalar:urn']);
+					$parent_version_id = (int) array_pop($arr);
+					$arr = explode(':', $_POST['scalar:child_urn']);
+					$child_version_id = (int) array_pop($arr);
+					$this->annotations->delete_relationship($parent_version_id, $child_version_id);  // Delete existing annotation relationship
+					$this->relate(false);  // Create new annotation relationship
+					$this->update(false);  // Update the annotation-page
+					$new_version_id = (int) $this->data['version_id'];
+					$this->_versions_copy_relations($parent_version_id, $new_version_id, array('tags'));  // Copy all relationships to new annotation-page
+				}
+				$this->save_data = $this->data;
+				if ($annotations[$j]['action'] != 'delete') {
+					$tags = $this->iiif_object->decode_tags($json[0], $book, $j, $this->data['version_id']);
+					for ($k = 0; $k < count($tags); $k++) {
+						$_POST = $tags[$k];
+						$this->data = array();
+						if ($tags[$k]['action'] == 'add') {
+							$this->add(false);
+						} else {
+							$this->relate(false);
+						}
+					}
+					$this->data = $this->save_data;
+				}
+				$this->_output();
+				exit;  // There will only be one annotation to save
+			}
+		
 		// OAC from Semantic Annotation Tool
-		if (isset($json[0]['@context']) && 'http://www.w3.org/ns/anno.jsonld' == $json[0]['@context']) {
+		} elseif (isset($json[0]['@context']) && 'http://www.w3.org/ns/anno.jsonld' == $json[0]['@context']) {
 			$this->load->library('OAC_Object','oac_object');
-			$_POST = array_merge($_POST, $this->oac_object->decode($json[0], $book));
+			$annotations = $this->oac_object->decode_annotations($json[0], $book);
+			for ($j = 0; $j < count($annotations); $j++) {
+				$_POST = $annotations[$j];
+				$this->data = array();
+				if ($annotations[$j]['action'] == 'add') {
+					$this->add(false);
+				} elseif ($annotations[$j]['action'] == 'update') {
+					$this->update(false);
+				}
+				$this->save_data = $this->data;
+				$tags = $this->oac_object->decode_tags($json[0], $book, $j, $this->data['version_id']);
+				for ($k = 0; $k < count($tags); $k++) {
+					$_POST = $tags[$k];
+					$this->data = array();
+					if ($tags[$k]['action'] == 'add') {
+						$this->add(false);
+					} else {
+						$this->relate(false);
+					}
+				}
+				$this->data = $this->save_data;
+				$this->_output();
+				exit;  // There will only be one annotation to save
+			}
 
 		// Lens JSON
 		} elseif (isset($json[0]['urn']) && 'urn:scalar:lens:' == substr($json[0]['urn'], 0, 16)) {

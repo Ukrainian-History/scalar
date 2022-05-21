@@ -32,6 +32,8 @@
             containingPath: null,
             containingPathNodes: [],
             elementsWithIncrementedData: [],
+            mediaSlots: [],
+            mediaSlotsByResource: {},
             pathIndex: null,
             gallery: null,
             bodyCopyWidth: null,
@@ -44,6 +46,7 @@
             generateIconCache: {},
             mapMarkers: [],
             pendingDeferredScripts: {},
+            usingHypothesis: ($('link#hypothesis').attr('href') === 'true'),
 
             dateParseRegex : /^(?:(?:(?:(\d+)[\/-])?(?:(\d+)[\/-])?)?([-]?\d+)(?:\s+)?(bce|BCE|bc|BC|ad|AD|ce|CE)?)(?:\s+)?((?:(?:[0-1][0-9])|(?:[2][0-3])|(?:[0-9]))(?::(?:[0-5][0-9])(?::[0-5][0-9])?)?(?:\s?(?:am|AM|pm|PM))?)?(?:(?:\s+-\s+)(?:(?:(?:(\d+)[\/-])?(?:(\d+)[\/-])?)?([-]?\d+)(?:\s+)?(bce|BCE|bc|BC|ad|AD|ce|CE)?)(?:\s+)?((?:(?:[0-1][0-9])|(?:[2][0-3])|(?:[0-9]))(?::(?:[0-5][0-9])(?::[0-5][0-9])?)?(?:\s?(?:am|AM|pm|PM))?)?)?$/,
 
@@ -410,6 +413,16 @@
                 link.addClass('texteo_icon');
                 link.addClass('texteo_icon_' + mediaelement.model.node.current.mediaSource.contentType);
 
+                // add texteo icons to media links that point to already instantiated media elements
+                $('.media_link').each(function() {
+                  if ($(this) != mediaelement.model.link) {
+                    if (mediaelement == $(this).data('mediaelement')) {
+                      $(this).addClass('texteo_icon');
+                      $(this).addClass('texteo_icon_' + mediaelement.model.node.current.mediaSource.contentType);
+                    }
+                  }
+                })
+
             },
 
             handleSetState: function(event, data) {
@@ -518,9 +531,25 @@
 
             addMediaElementForLink: function(link, parent, height, baseOptions) {
 
-                var inline = link.hasClass('inline'),
-                    size = link.attr('data-size'),
-                    align = link.attr('data-align');
+              var inline = link.hasClass('inline'),
+                  size = link.attr('data-size'),
+                  align = link.attr('data-align'),
+                  resource = link.attr('resource'),
+                  usePrior = link.attr('data-use-prior') == 'true',
+                  alreadyAdded = page.mediaSlots.indexOf(resource) != -1;
+
+              var currentNode = scalarapi.model.getCurrentPageNode();
+              var options = {
+                  url_attributes: ['href', 'src'],
+                  autoplay: link.attr('data-autoplay') == 'true',
+                  solo: link.attr('data-caption') == 'none',
+                  getRelated: (typeof currentNode !== 'undefined' && $('[resource="' + currentNode.url + '"][typeof="scalar:Media"]').length > 0), // only get related content if this is a media page
+                  typeLimits: typeLimits
+              };
+              $.extend(options, baseOptions);
+
+              if (inline || !usePrior || (usePrior && !alreadyAdded)) {
+                page.mediaSlots.push(resource);
 
                 // default alignment is 'right'
                 if (align == undefined) {
@@ -531,7 +560,7 @@
                 if (page.adaptiveMedia == 'mobile') {
                     size = 'full';
 
-                    // default size is 'medium'
+                // default size is 'medium'
                 } else if (size == undefined) {
                     size = 'medium';
                 }
@@ -558,16 +587,6 @@
                   width = page.bodyCopyWidth;
                 }
 
-                var currentNode = scalarapi.model.getCurrentPageNode();
-                var options = {
-                    url_attributes: ['href', 'src'],
-                    autoplay: link.attr('data-autoplay') == 'true',
-                    solo: link.attr('data-caption') == 'none',
-                    getRelated: (typeof currentNode !== 'undefined' && $('[resource="' + currentNode.url + '"][typeof="scalar:Media"]').length > 0), // only get related content if this is a media page
-                    typeLimits: typeLimits
-                };
-                $.extend(options, baseOptions);
-
                 // media at 'full' size get a maximum height
                 if (size == 'full' || size == 'native') {
                     if (height == null) {
@@ -579,10 +598,11 @@
                 options.size = size;
 
                 // create the slot where the media will be added
-                slot = link.slotmanager_create_slot(width, height, options);
+                slot = link.slotmanager_create_slot(width, height, options, true);
 
                 // slot was successfully created
                 if (slot) {
+                    page.mediaSlotsByResource[resource] = slot;
 
                     // hide the media element until we get it fully set up (after its metadata has loaded)
                     slotDOMElement = slot.data('slot');
@@ -656,6 +676,11 @@
 
                     return slot.data('mediaelement');
                 }
+              } else {
+                slot = link.slotmanager_create_slot(0, 0, options, false);
+                var mediaelement = page.mediaSlotsByResource[resource].data('mediaelement');
+                link.data('mediaelement', mediaelement);
+              }
 
             },
 
@@ -748,6 +773,9 @@
                         var contextButton = $('<img class="path-nav info" title="Citations and context" data-toggle="popover" data-placement="bottom" src="' + page.options.root_url + '/images/context@2x.png" alt="up arrow"/>').insertBefore($('nav'));
                         if (contextCount > 1) {
                             contextButton.addClass('multi');
+                        }
+                        if (page.usingHypothesis) {
+                        	contextButton.addClass('hypothesis_active');
                         }
                         contextButton.popover({
                             trigger: "click",
@@ -1530,8 +1558,14 @@
                         var link = $('<a href="' + node.current.sourceFile + '" data-annotations="[]" data-align="center" resource="' + node.slug + '" class="inline"></a>').hide().appendTo(parent);
                         page.addNoteOrAnnotationMedia(link, parent, width, height);
                     }
+
+		/* OLD
                     if (!noteViewer.data('show-content')) {
                         noteViewer.append('<a class="noteLink" href="' + scalarapi.model.urlPrefix + node.slug + '">Read more...</a>');
+		    }
+		*/
+                    if (!noteViewer.data('show-content')) {
+                    	noteViewer.find('.title').after('<p class="link"><a class="noteLink" href="' + scalarapi.model.urlPrefix + node.slug + '">Read more...</a></p>');
 		    }
                 }
             },
@@ -1699,15 +1733,23 @@
                         // the media if it isn't already playing
                         var annotationURL = $(this).data('targetAnnotation');
                         if (annotationURL != null) {
-                            mediaelement.seek(mediaelement.model.initialSeekAnnotation);
-                            page.sendMessage(mediaelement, page.annotationHasMessage(mediaelement.model.initialSeekAnnotation));
-                            if ((mediaelement.model.mediaSource.contentType != 'document') && (mediaelement.model.mediaSource.contentType != 'image')) {
-                                setTimeout(function() {
-                                    if (!mediaelement.is_playing()) {
-                                        mediaelement.play();
-                                    }
-                                }, 250);
+                          var annotation;
+                          var relations = mediaelement.model.node.getRelations('annotation', 'incoming');
+                          for (var i in relations) {
+                            if (relations[i].body.url == annotationURL) {
+                              annotation = relations[i];
                             }
+                          }
+                          if (!annotation) annotation = mediaelement.model.initialSeekAnnotation;
+                          mediaelement.seek(annotation);
+                          page.sendMessage(mediaelement, page.annotationHasMessage(annotation));
+                          if ((mediaelement.model.mediaSource.contentType != 'document') && (mediaelement.model.mediaSource.contentType != 'image')) {
+                              setTimeout(function() {
+                                  if (!mediaelement.is_playing()) {
+                                      mediaelement.play();
+                                  }
+                              }, 250);
+                          }
 
                         } else if (mediaelement.is_playing()) {
                             mediaelement.pause();
@@ -1735,9 +1777,11 @@
                 var scroll_time = 750;
                 var $body = $('html,body');
 
-                //scroll to media element when link is clicked
-                if (!(($mediaelement.offset().top + $mediaelement.height()) <= (-$body.offset().top + $body.height()) &&
-                        $mediaelement.offset().top >= (-$body.offset().top))) {
+                var mediaTop = $mediaelement.offset().top;
+                var scrollTop = $body.scrollTop();
+                var halfWindowHeight = window.innerHeight * .5;
+                // scroll to media element when link is clicked
+                if (mediaTop < scrollTop || mediaTop > (scrollTop + halfWindowHeight)) {
                     $body.animate({
                         scrollTop: $mediaelement.offset().top - scroll_buffer
                     }, scroll_time);
@@ -1793,7 +1837,7 @@
                   } else {
                     visualization.empty();
                   }
-                  div.ScalarLenses({onLensResults: this.handleLensResults})
+                  div.ScalarLenses({onLensResults: this.handleLensResults});
                 });
               }
             },
@@ -2206,7 +2250,8 @@
 
                             // if this is a media page, embed the media at native size
                             if ($('[resource="' + currentNode.url + '"][typeof="scalar:Media"]').length > 0) {
-                                var link = $('<a href="' + currentNode.current.sourceFile + '" resource="' + currentNode.slug + '" data-align="left" class="media-page-link" data-size="native"></a>').appendTo(page.bodyContent());
+                            	var size = ('full' == viewType) ? 'full' : 'native';
+                                var link = $('<a href="' + currentNode.current.sourceFile + '" resource="' + currentNode.slug + '" data-align="left" class="media-page-link" data-size="'+size+'"></a>').appendTo(page.bodyContent());
                                 link.wrap('<div></div>');
                                 page.addMediaElementForLink(link, link.parent());
                                 link.css('display', 'none');
@@ -2321,6 +2366,9 @@
                 $('.slot').remove();
                 $('.mediainfo').remove();
                 $('.media-page-link').remove();
+
+                page.mediaSlots = [];
+                page.mediaSlotsByResource = {};
 
                 page.clearIncrementedData();
 
@@ -2464,7 +2512,10 @@
                             map: map,
                             html: contentString,
                             title: title,
-                            icon: src
+                            icon: {
+                		    			url: src,
+                              scaledSize: new google.maps.Size(40,40)
+                		    		}
                         });
                         google.maps.event.addListener(marker, 'click', function() {
                             infoWindow.setContent(this.html);
@@ -2494,7 +2545,7 @@
                 }
 
                 var fontSize = 16,
-                    imageWidth = imageHeight = 45;
+                    imageWidth = imageHeight = 80;
 
                 if (number >= 1000) {
                     fontSize = 11;
@@ -2530,7 +2581,7 @@
                 var g = svg.append('g')
 
                 var path = g.append('path')
-                    .attr('transform', 'matrix(0.03,0,0,0.03,5,6)')
+                    .attr('transform', 'matrix(0.03,0,0,0.03,9,6)')
                     .attr('d', 'M730.94,1839.63C692.174,1649.33 623.824,1490.96 541.037,1344.19C479.63,1235.32 408.493,1134.83 342.673,1029.25C320.701,994.007 301.739,956.774 280.626,920.197C238.41,847.06 204.182,762.262 206.357,652.265C208.482,544.792 239.565,458.581 284.387,388.093C358.106,272.158 481.588,177.104 647.271,152.124C782.737,131.7 909.746,166.206 999.814,218.872C1073.41,261.91 1130.41,319.399 1173.73,387.152C1218.95,457.868 1250.09,541.412 1252.7,650.384C1254.04,706.214 1244.9,757.916 1232.02,800.802C1218.99,844.211 1198.03,880.497 1179.38,919.256C1142.97,994.915 1097.33,1064.24 1051.52,1133.6C915.083,1340.21 787.024,1550.91 730.94,1839.63L730.94,1839.63Z')
                     .attr('fill', 'url(#grad)')
                     .attr('stroke-width', 40)
@@ -2538,14 +2589,14 @@
 
                 if (number != null) {
                     var text = g.append('text')
-                        .attr('dx', 27)
+                        .attr('dx', 31)
                         .attr('dy', 32)
                         .attr('text-anchor', 'middle')
                         .attr('style', 'font-size:' + fontSize + 'px; fill: #000; font-family: Lato, Arial, sans-serif; font-weight: bold')
                         .text(number);
                 } else {
                     var circles = svg.append('circle')
-                        .attr('cx', '27.2')
+                        .attr('cx', '31.2')
                         .attr('cy', '27.2')
                         .attr('r', '5')
                         .style('fill', 'rgb(90,20,16)');
@@ -2923,9 +2974,8 @@
 	                    		if ('undefined' == typeof(media_node[uri]['http://open.vocab.org/terms/versionnumber'])) continue;
 	                    		var url = media_node[uri]['http://purl.org/dc/terms/isVersionOf'][0].value;
 	                    		var title = media_node[uri]['http://purl.org/dc/terms/title'][0].value;
-	                    		//var description = ('undefined'!=typeof(media_node[uri]['http://purl.org/dc/terms/description'])) ? media_node[uri]['http://purl.org/dc/terms/description'][0].value : null;
 	                    		var source = ('undefined'!=typeof(media_node[uri]['http://purl.org/dc/terms/source'])) ? media_node[uri]['http://purl.org/dc/terms/source'][0].value : null;
-	                    		if (-1 != source.indexOf('//')) source = null;  // Is a URL
+	                    		if (source) if (-1 != source.indexOf('//')) source = null;  // Is a URL
 	                    		var html = '<div class="citation caption_font"><a href="'+url+'">Background: '+title+''+((null!=source)?' ('+source+')':'')+'</a></div>';
 	                    		$('.title_card').append(html);
 	                    	}
@@ -3284,26 +3334,13 @@
                                     break;
 
                                 case "tags":
-                                    visOptions = {
-                                      modal: false,
-                                      content: 'lens',
-                                      lens: {
-                                        "visualization": {
-                                          "type": "word-cloud",
-                                          "options": {}
-                                        },
-                                        "components": [
-                                          {
-                                            "content-selector": {
-                                              "type": "items-by-type",
-                                              "content-type": "tag"
-                                            },
-                                            "modifiers": []
-                                          }
-                                        ],
-                                      }
-                                    }
-                                    break;
+            	                    visOptions = {
+            	                    	modal: false,
+            	                    	content: 'external',
+            	                    	relations: 'none',
+            	                    	format: 'tagcloud'
+            	                    }
+            	                    break;
 
                             }
                             visualization = $('<div class="visualization"></div>');
@@ -3521,6 +3558,7 @@
                                     	});
                                     } else {
                                         $("#"+slugProxy).css({ "background-image": 'url("'+((key.length)?key:'')+'")' });
+                                        if (isMobile) $("#"+slugProxy).addClass('mobile');
                                     };
                                     // end set background
                                     $('#'+slugProxy).find('.sp-block__content').append('<div><a class="nav_btn primary" href="'+base_url+slug+'">Continue</a></div>')
@@ -3529,6 +3567,7 @@
                                 }
                             }
                             okToAddExtras = false;
+                            page.addNotes();
                             break;
                     }
 

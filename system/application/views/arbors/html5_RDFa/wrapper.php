@@ -122,7 +122,7 @@ if (isset($page->version_index)) {
 <link id="proxy_url" href="<?=base_url().$book->slug.'/proxy'?>" />
 <? endif ?>
 <link id="scalar_version" href="<?php
-    include('system/application/views/scalar-version.php');
+    include 'system/application/views/scalar-version.php';
 ?>" />
 <link id="book_id" href="<?=$book->book_id?>" />
 <link id="parent" href="<?=$base_uri?>" />
@@ -137,6 +137,11 @@ if (isset($page->version_index)) {
 <link id="soundcloud_id" href="<?=$this->config->item('soundcloud_id')?>" />
 <link id="recaptcha2_site_key" href="<?=$recaptcha2_site_key?>" />
 <link id="recaptcha_public_key" href="<?=$recaptcha_public_key?>" />
+<? if (is_array($this->config->item('airtable'))): ?>
+<? foreach ($this->config->item('airtable') as $airtable): ?>
+<link id="airtable" href="<?=$airtable['name']?>" />
+<? endforeach ?>
+<? endif ?>
 <? if (!$mode && $hypothesis): ?>
 <link id="hypothesis" href="true" />
 <? endif ?>
@@ -150,17 +155,12 @@ if (isset($page->version_index)) {
 <link id="external_direct_hyperlink" href="true" />
 <? endif ?>
 <link id="google_maps_key" href="<?=$this->config->item('google_maps_key')?>" />
-<?
-$lenses_are_active= $this->config->item('lenses_are_active');
-if ($lenses_are_active) echo '<link id="lenses_are_active" href="true" />'."\n";
-?>
+<link id="harvard_art_museums_key" href="<?=$this->config->item('harvard_art_museums_key')?>" />
 <link id="CI_elapsed_time" href="<?php echo $this->benchmark->elapsed_time()?>" />
 <? if (!empty($_styles)) echo $_styles?>
 <?=template_script_tag_relative(__FILE__, 'js/jquery-3.4.1.min.js')."\n"?>
-<script src="https://code.jquery.com/jquery-migrate-3.1.0.js"></script>
 <?=template_script_tag_relative(__FILE__, 'js/yepnope.1.5.3-min.js')."\n"?>
 <?=template_script_tag_relative(__FILE__, 'js/yepnope.css.js')."\n"?>
-<?=template_script_tag_relative(__FILE__, 'js/html5shiv.js')."\n" // Keep thus UNDER jQuery, etc., otherwise things go haywire?>
 <script type="text/javascript" src="https://www.google.com/recaptcha/api.js?render=explicit"></script>
 <? if (!empty($_scripts)) echo $_scripts?>
 <?

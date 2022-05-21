@@ -297,7 +297,8 @@ class RDF_Object {
 	 	// Users
 		foreach ($settings['users'] as $row) {
 			if ($settings['u_all']==self::USERS_LISTED && !$row->list_in_index) continue;
-			$this->_safely_write_rdf($return, $settings['base_uri'].'users/'.$row->user_id, $CI->users->rdf($row));
+			$can_show_email = ($CI->users->is_a(strtolower($CI->data['user_level']), 'reviewer')) ? true : false;
+			$this->_safely_write_rdf($return, $settings['base_uri'].'users/'.$row->user_id, $CI->users->rdf($row, '', $can_show_email));
 		}
 
 	 	// Table of contents nodes
@@ -964,16 +965,14 @@ class RDF_Object {
 		$CI =& get_instance();
 		if ('object'!=gettype($CI->pages)) $CI->load->model('page_model','pages');
 
-		if ($settings['use_versions'] == null) $settings['use_versions'] = array();
-
 		$content = $CI->pages->get_by_slug($settings['book']->book_id, $annotation->parent_content_slug);
 		$settings['rel'] = self::REL_CHILDREN_ONLY;
 		$settings['versions'] = self::VERSIONS_MOST_RECENT;
 		if ($settings['use_versions_restriction'] == self::USE_VERSIONS_INCLUSIVE && !isset($settings['use_versions'][$annotation->parent_content_id])) {
 			$settings['use_versions'][$annotation->parent_content_id] = $annotation->parent_version_id;
-		} elseif (!array_key_exists($annotation->parent_content_id, $settings['use_versions'])) {
+		} elseif (null!==$settings['use_versions'] && !array_key_exists($annotation->parent_content_id, $settings['use_versions'])) {
 			return null;
-		} elseif ($settings['use_versions_restriction'] >= self::USE_VERSIONS_EXCLUSIVE && $settings['use_versions'][$annotation->parent_content_id] != $annotation->parent_version_id) {
+		} elseif ($settings['use_versions_restriction'] >= self::USE_VERSIONS_EXCLUSIVE && null!==$settings['use_versions'] && $settings['use_versions'][$annotation->parent_content_id] != $annotation->parent_version_id) {
 			return null;
 		}
 		++$settings['num_recurses'];
@@ -1024,15 +1023,13 @@ class RDF_Object {
 
 		$CI =& get_instance();
 		if ('object'!=gettype($CI->pages)) $CI->load->model('page_model','pages');
-
-		if ($settings['use_versions'] == null) $settings['use_versions'] = array();
 		
 		$content = $CI->pages->get_by_slug($settings['book']->book_id, $annotation->child_content_slug);
 		$settings['rel'] = self::REL_CHILDREN_ONLY;
 		$settings['versions'] = self::VERSIONS_MOST_RECENT;
 		if ($settings['use_versions_restriction'] == self::USE_VERSIONS_INCLUSIVE && !isset($settings['use_versions'][$annotation->child_content_id])) {
 			$settings['use_versions'][$annotation->child_content_id] = $annotation->child_version_id;
-		} elseif ($settings['use_versions_restriction'] >= self::USE_VERSIONS_EXCLUSIVE && $settings['use_versions'][$annotation->child_content_id] != $annotation->child_version_id) {
+		} elseif ($settings['use_versions_restriction'] >= self::USE_VERSIONS_EXCLUSIVE && null!==$settings['use_versions'] && $settings['use_versions'][$annotation->child_content_id] != $annotation->child_version_id) {
 			return null;
 		}
 		++$settings['num_recurses'];

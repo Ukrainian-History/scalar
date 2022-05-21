@@ -31,7 +31,11 @@
         this.userId = parseInt(temp[temp.length - 1]);
       }
       this.isConnectedToBook = ($('link#user_level').length) ? true : false;
-      $('heading').append('<p><strong>Lenses allow you to search and visualize the content of this project.</strong> Authors may create and publish lenses for everyone to use, and you can create your own privately. <a href="#">Learn more »</a></p>');
+      if (this.loggedIn) {
+        $('heading').append('<p><strong>Lenses allow you to search and visualize the content of this project.</strong> Authors may create and publish lenses for everyone to use, and you can create your own privately. <a target="_blank" href="https://scalar.usc.edu/works/guide2/lenses">Learn more »</a></p>');
+      } else {
+        $('heading').append('<p><strong>Lenses allow you to search and visualize the content of this project.</strong> Authors may create and publish lenses for everyone to use, and logged in users can create their own privately. <a target="_blank" href="https://scalar.usc.edu/works/guide2/lenses">Learn more »</a></p>');
+      }
       $('body').on('lensUpdated', (evt, lens) => { this.handleLensUpdated(evt, lens); });
       this.addSubmittedMessage();
       this.getLensData();
@@ -69,6 +73,7 @@
 				'id': this.userId,
 				'api_key': '',
 				'dcterms:title': 'Lens: Untitled',
+        'scalar:metadata:slug': 'lens',
 				'dcterms:description': 'A snapshot of the content of this project.',
 				'sioc:content': '',
         'scalar:metadata:is_live': '0',
@@ -98,6 +103,7 @@
     	var data = {
     	   action : 'add',
     		'dcterms:title' : 'Lens: Untitled',
+        'scalar:metadata:slug': 'lens',
     		'dcterms:description' : '',
     		'sioc:content' : '',
         'scalar:metadata:is_live': '0',
@@ -162,6 +168,7 @@
         action: 'UPDATE',
         'scalar:urn': this.selectedLens.urn,
         uriSegment: this.selectedLens.slug,
+        'scalar:metadata:slug': this.selectedLens.slug,
         'dcterms:title': this.selectedLens.title
       };
       var relationData = {};
@@ -186,10 +193,12 @@
       $('.lens-edit-container').append(this.submittedMessage);
       this.updateSubmittedMessage(lens);
       if (lens) {
-        div.ScalarLenses({
+        if (this.lensEditor) this.lensEditor.abort();
+        let element = div.ScalarLenses({
           lens: lens,
           onLensResults: this.handleLensResults
         });
+        this.lensEditor = $(element).data('lensEditor');
         $('.lens-edit-container>.non-ideal-state-message').hide();
         var visualization = $('.visualization');
         visualization.empty();

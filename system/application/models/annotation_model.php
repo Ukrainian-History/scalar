@@ -60,6 +60,12 @@ class Annotation_model extends MY_Model {
 
 	}
 
+	public function delete_relationship($parent_version_id = 0, $child_version_id = 0) {
+
+		return parent::delete_relationship($this->annotations_table, $parent_version_id, $child_version_id);
+
+	}
+
 	public function get_all($book_id=null, $type=null, $category=null, $is_live=true, $id_array=null) {
 
 		return parent::get_all($this->annotations_table, $book_id, $type, $category, $is_live, $id_array);
@@ -84,7 +90,7 @@ class Annotation_model extends MY_Model {
     	$j = 0;
     	foreach ($array as $version_urn) {
 
-    		if (isURN($version_urn)) $child_version_id = $this->page_urn_to_content_id($version_urn);
+    		$child_version_id = (isURN($version_urn)) ? $this->page_urn_to_content_id($version_urn) : (int) $version_urn;
     		if (empty($child_version_id)) continue;
 
     		$_start_seconds = (isset($start_seconds[$j]) && !empty($start_seconds[$j])) ? $start_seconds[$j] : 0;
@@ -121,7 +127,7 @@ class Annotation_model extends MY_Model {
     	$j = 0;
     	foreach ($array as $version_urn) {
 
-    		if (isURN($version_urn)) $parent_version_id = $this->version_urn_to_version_id($version_urn);
+    		$parent_version_id = (isURN($version_urn)) ? $this->version_urn_to_version_id($version_urn) : (int) $version_urn;
     		if (empty($parent_version_id)) continue;
 
     		$_start_seconds  = (isset($start_seconds[$j])) ? $start_seconds[$j] : 0;
