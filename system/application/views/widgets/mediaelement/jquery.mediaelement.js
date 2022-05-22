@@ -2363,9 +2363,27 @@ function YouTubeGetID(url){
 
 					$el = $(this.model.element[0]);
 
+					var annotationBalloonText = '<div class="image-annotation-wrapper"><a data-src="' +
+							this.image.src + '-' + this.model.id+'" href="' + annotation.body.url + '"><b>' +
+							annotation.body.getDisplayTitle() + "</b></a><p>";
+
+					if (annotation.body.current.description != null) {
+						annotationBalloonText += annotation.body.current.description;
+					} else if (annotation.body.current.content != null) {
+						annotationBalloonText += annotation.body.current.content;
+					}
+
+					if (annotation.body.current.description != null && annotation.body.current.content != null) {
+						annotationBalloonText += '</p><a href="' + annotation.body.url + '">Read more...</a>';
+					} else {
+						annotationBalloonText += '</p>';
+					}
+
+					annotationBalloonText += "</div>";
+
 					var annodata = {
 						src: this.image.src + '-' + this.model.id,
-						text: '<div class="image-annotation-wrapper"><a data-src="'+this.image.src + '-' + this.model.id+'" href="' + annotation.body.url + '"><b>' + annotation.body.getDisplayTitle() + "</b></a> " + (( annotation.body.current.content != null ) ? annotation.body.current.content+"</div>" : "</div>" ),
+						text: annotationBalloonText,
 						editable: editable,
 						shapes: [{
 							type: "rect",

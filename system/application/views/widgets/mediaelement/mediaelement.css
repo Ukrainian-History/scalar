@@ -8,6 +8,8 @@
 .annotorious-popup-text .mediaelement, .current_annotation .mediaelement { z-index: auto; }
 .image-annotation-wrapper { width: 30rem; }
 
+.image-annotation-wrapper p { margin: 5px 0 5px 0; }
+
 .mediaContainer {
 	background-color: #e5e5e5;
 	border-top: 1px solid #cbcbcb;
