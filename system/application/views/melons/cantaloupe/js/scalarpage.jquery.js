@@ -479,7 +479,7 @@
             addInlineNoteElementForLink: function(link) {
 
             	link.wrap('<div class="inlineNoteBody body_copy"></div>');
-            	link.text('Go to note').attr('href', $('link#parent').attr('href')+link.attr('resource'));
+            	link.text('Read more...').attr('href', $('link#parent').attr('href')+link.attr('resource'));
             	var wrapper = link.parent();
             	var slug = link.attr('resource');
             	var show = {title:false,description:false,content:true};
@@ -1559,14 +1559,15 @@
                         page.addNoteOrAnnotationMedia(link, parent, width, height);
                     }
 
-		/* OLD
+		/* OLD */
                     if (!noteViewer.data('show-content')) {
                         noteViewer.append('<a class="noteLink" href="' + scalarapi.model.urlPrefix + node.slug + '">Read more...</a>');
 		    }
-		*/
+
+		/* NEW
                     if (!noteViewer.data('show-content')) {
                     	noteViewer.find('.title').after('<p class="link"><a class="noteLink" href="' + scalarapi.model.urlPrefix + node.slug + '">Read more...</a></p>');
-		    }
+		    } */
                 }
             },
 

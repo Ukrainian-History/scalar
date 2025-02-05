@@ -37,7 +37,10 @@ article h6 { font-size: 1.4rem; line-height: 2.4rem; margin-top: 2.4rem; margin-
 .page_margins { padding-left: 7.2rem; padding-right: 7.2rem; }
 .left_margin { min-width: 7.2rem; float: left; }
 
-blockquote { padding-left: 3.6rem; padding-right: 3.6rem; font-style: italic; }
+blockquote { padding-left: 3.6rem; padding-right: 3.6rem; font-style: italic; font-size: 90%; }
+.body_copy blockquote h4 { margin-top: 0.5rem !important; }
+.body_copy blockquote h5 { margin-top: 0.5rem !important; }
+
 pre { margin: 1.2rem 0; }
 i,em { font-style: italic; }
 b,strong { font-weight: bold; }
@@ -1001,7 +1004,7 @@ audio::-webkit-media-controls-enclosure { max-width: 100%; /* removes chrome's m
 
 a.nav_btn {
 	padding: 1rem;
-	text-decoration: none;
+	text-decoration: none !important;
 	background-color: #ddd;
 	color: #444;
 	/*line-height: 3.9rem;*/
@@ -1954,4 +1957,8 @@ span.base {
 
 .body_copy a {
 	text-decoration: underline;
+}
+
+.inlineNote.no-more-link {
+	display: none;
 }
