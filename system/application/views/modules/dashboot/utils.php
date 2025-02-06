@@ -95,6 +95,7 @@ $(document).ready(function() {
 		<li class="admin" data-id="recreate-book-folders"><a href="?book_id=<?=((isset($book) && !empty($book))?$book->book_id:'0')?>&zone=utils&pill=recreate-book-folders#tabs-utils">Recreate book folders</a></li>
 		<li class="admin" data-id="list-all-users"><a href="?book_id=<?=((isset($book) && !empty($book))?$book->book_id:'0')?>&zone=utils&pill=list-all-users#tabs-utils">List all users</a></li>
 		<li class="admin" data-id="list-all-books"><a href="?book_id=<?=((isset($book) && !empty($book))?$book->book_id:'0')?>&zone=utils&pill=list-all-books#tabs-utils">List all books</a></li>
+		<li class="admin" data-id="list-recent-pages"><a href="?book_id=<?=((isset($book) && !empty($book))?$book->book_id:'0')?>&zone=utils&pill=list-recent-pages#tabs-utils">List recently edited pages</a></li>
 		<li class="admin" data-id="normalize-id2val"><a href="?book_id=<?=((isset($book) && !empty($book))?$book->book_id:'0')?>&zone=utils&pill=normalize-id2val#tabs-utils">Normalize predicate table</a></li>
 <? endif ?>
 	  </ul>
@@ -297,6 +298,7 @@ $(document).ready(function() {
 						<th>Password</th>
 						<th>URL</th>
 						<th>Books</th>
+						<th>Actions</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -326,6 +328,18 @@ $(document).ready(function() {
 						echo '</a>, '.$book->relationship.'<br />';
 					}
 					echo "</td>\n";
+					$user_is_deactivated = false;
+					if (isset($disallowed_emails)) {
+						if (in_array($users[$i]->email, $disallowed_emails)) {
+							$user_is_deactivated = true;
+						}
+					}
+					if (!$user_is_deactivated) {
+						echo '<td><a href="'.confirm_slash(base_url()).'system/dashboard?action=do_deactivate&user_id='.$users[$i]->user_id.'&type=users&zone=all-users&pill=manage-users&tab=tabs-utils" onclick="if (!confirm(\'Are you sure you wish to DEACTIVATE this user? This will make all of their books private and add their email to the disallowed list, preventing them from logging in.\')) return false;">Deactivate</a><br />';
+					} else {
+						echo '<td>Inactive<br />';
+					}
+					echo "</td>\n";
 					echo "</tr>\n";
 				}
 			}
@@ -342,7 +356,7 @@ $(document).ready(function() {
 			<small>Add new user:</small>
 			<div id="manage-users-add-new" class="form-group form-group-sm">
 				<input tabindex="1" class="form-control" type="text" name="email" value="" placeholder="Email address" />&nbsp;
-				<input tabindex="2" class="form-control" type="text" name="fullname" value="" placeholder="Full nane" />&nbsp;
+				<input tabindex="2" class="form-control" type="text" name="fullname" value="" placeholder="Full name" />&nbsp;
 				<input tabindex="3" class="form-control" type="password" name="password_1" value="" placeholder="Password" />&nbsp;
 				<input tabindex="4" class="form-control" type="password" name="password_2" value="" placeholder="Retype password" />&nbsp;
 				<input tabindex="5" class="btn btn-sm" type="submit" value="Add" />
@@ -666,6 +680,7 @@ $(document).ready(function() {
 			</form>
 		<?php endif; ?>
     	</div>
+
     	<div class="section" id="list-all-users">
     	<?php if ('list-all-users'==$pill): ?>
 			<form action="<?=confirm_slash(base_url())?>system/dashboard?book_id=<?=((isset($book)&&!empty($book))?$book->book_id:0)?>&zone=utils&pill=list-all-users#tabs-utils" method="post">
@@ -705,6 +720,34 @@ $(document).ready(function() {
 			<input type="button" value="Generate" class="btn btn-primary" onclick="this.disabled=true;$(this).parent().find('form:first').trigger('submit');" />
     	<?php endif; ?>
     	</div>
+
+			<div class="section" id="list-recent-pages">
+    	<?php if ('list-recent-pages'==$pill): ?>
+			<form action="<?=confirm_slash(base_url())?>system/dashboard?book_id=<?=((isset($book)&&!empty($book))?$book->book_id:0)?>&zone=utils&pill=list-recent-pages#tabs-utils" method="post">
+			<input type="hidden" name="zone" value="utils" />
+			<input type="hidden" name="action" value="get_recent_pages" />
+			<h4>List recently edited pages and media</h4>
+			Lists the 400 most recently edited pages and media items, across all books.<br /><br />
+			<div class="div_list"><?php
+				if (!isset($recent_pages_list)) {
+
+				} elseif (empty($recent_pages_list)) {
+					echo 'No content could be found!';
+				} else {
+					foreach($recent_pages_list as $page) {
+						echo '<div>';
+						echo '<a href="'.confirm_slash(base_url()).$page->book_slug.'/'.$page->page_slug.'">'.$page->page_slug.'</a>';
+						echo '</div>'."\n";
+					}
+				}
+			echo '</div>'."\n";
+			echo '</form>'."\n";
+			?>
+			<br />
+			<input type="button" value="Generate" class="btn btn-primary" onclick="this.disabled=true;$(this).parent().find('form:first').trigger('submit');" />
+    	<?php endif; ?>
+    	</div>
+
     	<div class="section" id="list-all-books">
     	<?php if ('list-all-books'==$pill): ?>
 			<form action="<?=confirm_slash(base_url())?>system/dashboard?book_id=<?=((isset($book)&&!empty($book))?$book->book_id:0)?>&zone=utils&pill=list-all-books#tabs-utils" method="post">

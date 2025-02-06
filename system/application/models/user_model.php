@@ -274,7 +274,7 @@ class User_model extends MY_Model {
 
      	$this->db->select('*');
     	$this->db->from($this->users_table);
-    	$this->db->where('fullname', $fullname);
+			$this->db->where('fullname', $fullname);
     	$query = $this->db->get();
     	if ($query->num_rows == 0) return false;
     	return $query->result();  	// Could be more than one
@@ -410,6 +410,16 @@ class User_model extends MY_Model {
 
     }
 
+	public function make_books_private($user_id) {
+		$books = $this->get_books($user_id);
+		foreach ($books as $row) {
+			$this->db->set('url_is_public', 0);
+			$this->db->set('display_in_index', 0);
+			$this->db->where('book_id', $row->book_id);
+			$this->db->update($this->books_table);
+		}
+	}
+
 	public function get_book_ids($array=array()) {
 
 		$return = array();
@@ -449,6 +459,7 @@ class User_model extends MY_Model {
     public function search($sq='',$orderby='title',$orderdir='asc') {
 
     	$this->db->like('fullname', $sq);
+			$this->db->or_like('email', $sq);
     	$query = $this->db->get($this->users_table);
     	$result = $query->result();
     	for ($j = 0; $j < count($result); $j++) {
