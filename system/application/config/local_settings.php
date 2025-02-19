@@ -16,7 +16,7 @@ $config['active_cover'] = 'cover';
 $config['active_dashboard'] = 'dashboard';
 
 // SALT, any string you want as long as it is complicated
-$config['shasalt'] = (getenv('SCALAR_SHASALT') ? getenv('SCALAR_SHASALT') : '');
+$config['shasalt'] = (getenv('SCALAR_SHASALT') ? getenv('SCALAR_SHASALT') : '3cl2J87lu1dvx3E62iLOj6vS6YX9cgdV');
 
 // Default storage to use for uploaded files. 
 // File system storage is the default.
@@ -45,7 +45,7 @@ $config['recaptcha2_secret_key'] = (getenv('SCALAR_RECAPTCHA2_SECRET_KEY') ? get
 
 // Register key (leave blank if no register key required, e.g., array())
 // One of the strings placed in this array will be required in order for new users to register
-$config['register_key'] = array();
+$config['register_key'] = array("istorychnyi_tsentr");
 
 // Max login attempts (e.g., 10) and the penalty wait time in seconds (e.g., 120)
 $config['max_login_attempts'] = 6;
@@ -79,22 +79,6 @@ $config['dpla_key'] = (getenv('SCALAR_DPLA_KEY') ? getenv('SCALAR_DPLA_KEY') : '
 // New York Public Library key
 $config['nypl_key'] = (getenv('SCALAR_NYPL_KEY') ? getenv('SCALAR_NYPL_KEY') : '');
 
-// Harvard Art Museums api key
-$config['harvard_art_museums_key'] = (getenv('HAM_API_KEY') ? getenv('HAM_API_KEY') : '');
-
-// Airtable importer settings
-/*
-$config['airtable'] = array(
-	array(
-		'base_url' => '',  // URL to the base
-		'table_name' => '',  // Table name
-		'field_to_search' => '',  // Field in the table to search on
-		'name' => '',  // Name of the table to appear in the Scalar header bar
-		'token' => ''  // Personal access token, see https://airtable.com/developers/web/guides/personal-access-tokens#creating-a-token
-	)	
-);
-*/
-
 // Custom message for the book index page (leave blank for no message)		   
 $config['index_msg'] = '';
 
@@ -103,12 +87,7 @@ $config['book_msg'] = '';
 $config['book_msg_cookie_name'] = 'ci_hide_scalar_book_msg';
 
 // Custom message displayed beneath the registration key field on the register page
-$config['registration_key_msg'] = '';  
-
-// URLs to Terms of Service and Privacy Policy pages for all books on this install (displayed in footer if present).
-// Can be overridden on a per book basis in the Dashboard.
-$config['terms_of_service'] = '';
-$config['privacy_policy'] = '';
+$config['registration_key_msg'] = '';    
 
 // LDAP authentication settings
 $config['use_ldap'] = (getenv('SCALAR_USE_LDAP') ? getenv('SCALAR_USE_LDAP') : false);  // Default: off
@@ -122,12 +101,6 @@ $config['ldap_filter'] = (getenv('SCALAR_LDAP_FILTER') ? getenv('SCALAR_LDAP_FIL
 $config['use_ad_ldap'] = (getenv('SCALAR_USE_AD_LDAP') ? getenv('SCALAR_USE_AD_LDAP') : false);  // Default: off
 $config['ad_bind_user'] = (getenv('SCALAR_AD_BIND_USER') ? getenv('SCALAR_AD_BIND_USER') : "");  // Use LDAP Distinguished Name
 $config['ad_bind_pass'] = (getenv('SCALAR_AD_BIND_PASS') ? getenv('SCALAR_AD_BIND_PASS') : "");
-   // explicity enable/disable ldap referrals. Expects 1 or 0. If not set, defaults to previous behavior, which is:
-   // if AD is active, turn referrals OFF, otherwise, don't set the value
-if( getenv('SCALAR_SET_LDAP_REFERRALS') )
-	$config['set_ldap_referrals'] = getenv('SCALAR_SET_LDAP_REFERRALS');
-else
-	$config['set_ldap_referrals'] = ($config['use_ad_ldap']) ? 0 : null;	
 
 // Emails
 $config['email_replyto_address'] = (getenv('SCALAR_EMAIL_REPLYTO_ADDRESS') ? getenv('SCALAR_EMAIL_REPLYTO_ADDRESS') : ''); 
@@ -152,7 +125,7 @@ $config['index_hide_published'] = true;
 $config['iframe_redlist'] = array('youtube.com', 'vimeo.com', 'google.com', 'microsoft.com', 'metmuseum.org', 'bloomberg.com', 'nytimes.com', 'nationalreview.com', 'theguardian.com', 'twitter.com'); 
 
 // If true, external hyperlinks will go directly to the external page rather than attempt to be rendered in Scalar's external.php
-$config['external_direct_hyperlink'] = false;
+$config['external_direct_hyperlink'] = true;
 
 // Default style theme (for newly created books)
 $config['default_stylesheet'] = 'minimal';
