@@ -1,4 +1,5 @@
-<?php if ( ! defined('BASEPATH')) exit('No direct script access allowed');
+<?php if (!defined('BASEPATH'))
+    exit('No direct script access allowed');
 /*
  * This version number represents the last Scalar Release on Github:
  * https://github.com/anvc/scalar/releases
@@ -13,4 +14,4 @@
  * echo '</p>';
  */
 ?>
-2.6.8
+2.6.12

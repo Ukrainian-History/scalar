@@ -190,7 +190,8 @@ class User_model extends MY_Model {
         if( $set_referrals !== null )
             ldap_set_option($ldapCon, LDAP_OPT_REFERRALS, (int) $set_referrals );
 
-        if ( !ldap_start_tls($ldapCon) ) {
+		// attempt to start TLS only if we're not using LDAPS
+        if ( strpos( $ldap_host, 'ldaps://' ) !== 0 && ! ldap_start_tls($ldapCon) ) {
             throw new Exception('Unable to start TLS on LDAP connection');
         }
 
@@ -201,6 +202,10 @@ class User_model extends MY_Model {
         $ldapFilter = '(&(objectClass=user)(' . $uname_field . '=' . $uname . ')' . $filter . ')';
 
         $ldapSearch = ldap_search($ldapCon, $basedn, $ldapFilter);
+
+		if ( ! $ldapSearch ) {
+			throw new Exception(ldap_error($ldapCon));
+		}
 
         // Found the user, now check the password by trying to bind as that user
         $info = ldap_get_entries($ldapCon, $ldapSearch);
@@ -761,7 +766,11 @@ class User_model extends MY_Model {
     	if (empty($user_id)) return;
     	$user = $this->get_by_user_id($user_id);
     	if (!property_exists($user, 'previous_passwords')) return;  // Database hasn't been updated
-    	$previous_passwords = json_decode($user->previous_passwords, true);
+    	if ($user->previous_passwords) {
+	    	$previous_passwords = json_decode($user->previous_passwords, true);
+    	} else {
+    		$previous_passwords = array();
+    	}
     	if (empty($previous_passwords) || !is_array($previous_passwords)) $previous_passwords = array();
     	$current_time = time();
     	$least_days = null;
@@ -777,8 +786,12 @@ class User_model extends MY_Model {
     	
     	$this->load->model('resource_model', 'resources');
     	$json = $this->resources->get('disallowed_emails');
-    	$arr = json_decode($json, true);
-    	if (empty($arr)) $arr = array();
+		// Ensure we're not passing null to json_decode
+    	if ( ! empty( $json ) ) {
+			$arr = json_decode( $json, true );
+		} else {
+			$arr = array();
+		}
     	if (in_array($email, $arr)) return true;
     	return false;
     	

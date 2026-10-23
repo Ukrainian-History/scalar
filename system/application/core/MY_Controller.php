@@ -24,6 +24,7 @@
  * @version					2.3
  */
 
+ #[\AllowDynamicProperties]
 class MY_Controller extends CI_Controller {
 
 	public $data = array();
@@ -36,6 +37,11 @@ class MY_Controller extends CI_Controller {
 		header("Cache-Control: no-cache, must-revalidate"); // HTTP/1.1
 		header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // Date in the past
 
+		// ARC2 requires PHP 8
+		if (((int) phpversion()) < 8) {
+			die('This Scalar version requires PHP 8 or above. Current version is: ' . phpversion());
+		}
+		
 		// GET vars, note that this requires 'uri_protocol' to be 'PATH_INFO' in config.php
 		parse_str($_SERVER['QUERY_STRING'], $_GET);
 
@@ -208,7 +214,9 @@ class MY_Controller extends CI_Controller {
 
 	protected function login_is_book_admin($level='Editor') {
 
-		if ($this->users->is_a(strtolower($this->data['user_level']), $level)) return true;
+		$user_level = $this->data['user_level'];
+		if (null != $user_level) $user_level = strtolower($user_level); // Can't send null to strtolower() anymore
+		if ($this->users->is_a($user_level, $level)) return true;
 		return false;
 
 	}

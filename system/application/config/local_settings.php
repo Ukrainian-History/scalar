@@ -90,7 +90,7 @@ $config['book_msg_cookie_name'] = 'ci_hide_scalar_book_msg';
 $config['registration_key_msg'] = '';    
 
 // LDAP authentication settings
-$config['use_ldap'] = (getenv('SCALAR_USE_LDAP') ? getenv('SCALAR_USE_LDAP') : false);  // Default: off
+$config['use_ldap'] = getenv('SCALAR_USE_LDAP') ? (getenv('SCALAR_USE_LDAP') === 'true') : false;  // Default: off
 $config['ldap_server'] = (getenv('SCALAR_LDAP_SERVER') ? getenv('SCALAR_LDAP_SERVER') : "ldap://ldap.server.name");  // Use 'ldap://' prefix even if connecting to ldaps
 $config['ldap_port'] = (getenv('SCALAR_LDAP_PORT') ? getenv('SCALAR_LDAP_PORT') : 389);
 $config['ldap_basedn'] = (getenv('SCALAR_LDAP_BASEDN') ? getenv('SCALAR_LDAP_BASEDN') : "dc=organization,dc=tld");
@@ -98,7 +98,7 @@ $config['ldap_uname_field'] = (getenv('SCALAR_LDAP_UNAME_FIELD') ? getenv('SCALA
 $config['ldap_filter'] = (getenv('SCALAR_LDAP_FILTER') ? getenv('SCALAR_LDAP_FILTER') : '');
 
 // Active Directory LDAP settings
-$config['use_ad_ldap'] = (getenv('SCALAR_USE_AD_LDAP') ? getenv('SCALAR_USE_AD_LDAP') : false);  // Default: off
+$config['use_ad_ldap'] = getenv('SCALAR_USE_AD_LDAP') ? (getenv('SCALAR_USE_AD_LDAP') === 'true') : false;  // Default: off
 $config['ad_bind_user'] = (getenv('SCALAR_AD_BIND_USER') ? getenv('SCALAR_AD_BIND_USER') : "");  // Use LDAP Distinguished Name
 $config['ad_bind_pass'] = (getenv('SCALAR_AD_BIND_PASS') ? getenv('SCALAR_AD_BIND_PASS') : "");
 

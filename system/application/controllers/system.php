@@ -825,8 +825,48 @@ class System extends MY_Controller {
 					$this->data['normalize_predicate_table'] = array_keys($predicates);
 					unset($predicates);
 					break;
-		 	}
-	 	} catch (Exception $e) {
+				case "export_media_folder":  // Export media folder as zip
+					if (!$this->data['login']->is_logged_in) $this->kickout();
+					$book_id = (isset($_REQUEST['book_id']) && !empty($_REQUEST['book_id'])) ? (int) $_REQUEST['book_id'] : 0;
+					if (empty($book_id)) show_error('Invalid book ID');
+					$this->data['book'] = $this->books->get($book_id);
+					$this->set_user_book_perms();
+					if (!$this->login_is_book_admin()) show_error('Invalid permissions');
+					
+					// Get the media directory path
+					$media_path = FCPATH.$this->data['book']->slug.'/media/';
+					
+					// Check if media directory exists
+					if (!file_exists($media_path) || !is_dir($media_path)) {
+						show_error('Media folder not found for this book');
+					}
+					
+					// Set headers for download
+					$filename = $this->data['book']->slug.'_media.zip';
+					header('Content-Type: application/zip');
+					header('Content-Disposition: attachment; filename="'.$filename.'"');
+					header('Content-Transfer-Encoding: binary');
+					
+					// Flush output buffers to prevent corruption
+					while (ob_get_level()) {
+						ob_end_clean();
+					}
+					
+					// Stream the zip file directly to the client
+					$command = 'cd ' . escapeshellarg($media_path) . ' && zip -r - .';
+					$fp = popen($command, 'r');
+					
+					if ($fp) {
+						while (!feof($fp)) {
+							echo fread($fp, 8192);
+							flush();
+						}
+						pclose($fp);
+					}
+					
+					exit;
+				}
+			} catch (Exception $e) {
 			show_error($e->getMessage());
 		}
 

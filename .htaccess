@@ -12,7 +12,19 @@ Options -MultiViews
 #RewriteCond %{REQUEST_FILENAME} !maintenance.html [NC]
 #RewriteRule (.*) maintenance.html [L]
 
-# To route the home page (book index) to some place else, uncomment these lines
+# To protect all hidden files and directories
+# (including, most importantly, .git)
+RewriteRule (^\.)|(/\.) - [R=404,L]
+
+# Block any files in the root directory other
+# than codeigniter.php and maintenance.html
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteCond $1 !maintenance.html$
+RewriteCond $1 !codeigniter.php$
+RewriteRule ^([^/]+)$  - [R=404,L]
+
+# To route the home page (book index) to some place else, uncomment
+# these lines
 #RewriteCond %{REQUEST_FILENAME} ^/Library/WebServer/scalar\.usc\.edu/anvc/index\.php$
 #RewriteRule (.*) /Library/WebServer/scalar.usc.edu/anvc_site/ [L]
 #RewriteCond %{REQUEST_FILENAME} ^/Library/WebServer/scalar\.usc\.edu/anvc/$
@@ -54,3 +66,5 @@ RewriteRule ^/(.*)$ - [L]
 RewriteCond %{REQUEST_FILENAME} !codeigniter.php [NC]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule (.*) codeigniter.php/$1 [L]
+
+

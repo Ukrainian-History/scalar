@@ -19,10 +19,26 @@
 
 (function($) {
 
+	var scalarMediaTabsUniqueID = 0;	// keeps tab ids unique across media elements on the same page
+
 	$.scalarmedia = function(m, e, options) {
 
 		var mediaelement = m;
 		var element = e;
+
+		// Tab ids and radio group names have to be unique to this media element
+		var tabGroupId = 'media_tab_' + scalarMediaTabsUniqueID++;
+
+		// Adds a tab to the media tab bar and returns its radio input. Callers bind their click
+		// handlers to the input alone, not to the input and label together, so that a click on the
+		// label (which the browser forwards to the input) only fires them once.
+		var createTab = function(slug, labelText, checked) {
+			var id = tabGroupId + '_' + slug;
+			var input = $('<input type="radio" class="media_tab" name="'+tabGroupId+'" id="'+id+'">');
+			if (checked) input.prop('checked', true);
+			mediaTabs.append(input).append('<label for="'+id+'">'+labelText+'</label>');
+			return input;
+		}
 
 		var media = {
 
@@ -270,12 +286,74 @@
 						col.append('<p>'+rowRelation.body.getDisplayTitle()+'</p>');
 					});
 				}
+			},
+
+			addNextRelatedMedia: function() {
+				if (!relations) return
+				relationIndex++
+				if (relationIndex < relations.length) {
+					var relation = relations[relationIndex];
+					try {
+						var obj = JSON.parse(relation)
+						// if no error, then we got legal JSON and this item is not related media; try the next one
+						this.addNextRelatedMedia()
+						return
+					} catch(error) {
+						// no valid JSON found; continue
+					}
+					if (scalarapi.getFileExtension(relation) == 'vtt') {
+						// if extension is 'vtt', then this item is a vtt file; try the next one
+						this.addNextRelatedMedia()
+						return
+					} else {
+						if (scalarapi.loadNode(relation, null, this.handleRelatedMediaLoaded, this.handleRelatedMediaError) == 'loaded') media.handleRelatedMediaLoaded()
+					}
+				} else {
+					this.displayRelatedMedia()
+				}
+			},
+
+			handleRelatedMediaLoaded: function() {
+				var node = scalarapi.getNode(relations[relationIndex])
+				relatedNodes.push(node)
+				media.addNextRelatedMedia()
+			},
+
+			handleRelatedMediaError: function() {
+				console.log('error loading related media')
+			},
+
+			showTab: function(tab, pane) {
+				tab.parent().parent().find('.pane').hide();
+				media.minimizeAnnotationPane();
+				pane.show();
+				tab.parent().find('.media_tab').removeClass('select');
+				tab.addClass('select');
+				if (currentRelation != null) {
+					currentAnnotation.slideUp();
+					media.showAnnotation(null, currentRelation, mediaelement, true);
+				}
+			},
+
+			displayRelatedMedia: function() {
+				if (relatedNodes.length > 0) {
+					var relatedTab = createTab('related', 'Related');
+					var relatedPane = $('<div class="media_related pane"></div>').appendTo(element);
+					relatedNodes.forEach(function (node) {
+						var nodeDescription = ''
+						if (node.current.description) nodeDescription = node.current.description
+						relatedPane.append('<p><a href="'+node.url+'"><strong>'+node.current.title+'</strong></a> ('+node.current.mediaSource.name+' '+node.current.mediaSource.contentType+')</br>'+nodeDescription+'</p>')
+					})
+					relatedPane.hide()
+					relatedTab.on('click', function() { media.showTab($(this), relatedPane) });
+				}
 			}
-		}  //!var media
+		}
 
 		var node = mediaelement.model.node;
-
-		//if (node.current.description != null) mediaelement.view.footer.append('<div><a class="media_info" href="javascript:;">i</a> '+node.current.description+'</div>');
+		var relations = node.current.auxProperties['dcterms:relation']
+		var relationIndex = -1;
+		var relatedNodes = []
 
 		if (element != null) {
 			var currentAnnotation = $('<div class="current_annotation"><table></table></div>').appendTo(element);
@@ -354,17 +432,8 @@
 				descriptionPane.find('a.citations-link').on('click',  function() {
 					media.options[ 'details' ].show( node );
 				} );
-				var descriptionTab = $('<div class="media_tab select">Description</div>').appendTo(mediaTabs);
-				descriptionTab.on('click', function() {
-					$(this).parent().parent().find('.pane').hide();
-					media.minimizeAnnotationPane();
-					descriptionPane.show();
-					$(this).parent().find('.media_tab').removeClass('select');
-					descriptionTab.addClass('select');
-					if (currentRelation != null) {
-						media.showAnnotation(null, currentRelation, mediaelement, true);
-					}
-				});
+				var descriptionTab = createTab('description', 'Description', true);
+				descriptionTab.on('click', function() { media.showTab($(this), descriptionPane) });
 				element.find('.media_description').show();
 			}
 			foundAuxContent = true;
@@ -392,18 +461,8 @@
 			}
 
 			if (annotations.length > 0) {
-				var annotationTab = $('<div class="media_tab">Annotations</div>').appendTo(mediaTabs);
-				annotationTab.on('click', function() {
-					$(this).parent().parent().find('.pane').hide();
-					annotationPane.show();
-					$(this).parent().find('.media_tab').removeClass('select');
-					annotationTab.addClass('select');
-					if (currentRelation != null) {
-						currentAnnotation.slideUp();
-						media.showAnnotation(null, currentRelation, mediaelement, true);
-						//media.hideAnnotation(null, null, mediaelement, true);
-					}
-				});
+				var annotationTab = createTab('annotations', 'Annotations');
+				annotationTab.on('click', function() { media.showTab($(this), annotationPane) });
 				var annotationPane = $('<div class="media_annotations pane"></div>').appendTo(element);
 				var table = $('<table></table>').appendTo(annotationPane);
 				for (i in annotations) {
@@ -431,42 +490,33 @@
 				}
 				if (!foundAuxContent) {
 					element.find('.media_annotations').show();
-					annotationTab.addClass('select');
+					annotationTab.prop('checked', true);
 					foundAuxContent = true;
 				}
 			}
 
 			// hide metadata tab if the media's description tab includes the metadata
 			if (media.options.caption != 'metadata') {
-				var metadataTab = $('<div class="media_tab">Details</div>').appendTo(mediaTabs);
+				var metadataTab = createTab('metadata', 'Details');
 				var metadataPane = $('<div class="media_metadata pane"></div>').appendTo(element);
-				metadataTab.on('click', function() {
-					$(this).parent().parent().find('.pane').hide();
-					media.minimizeAnnotationPane();
-					metadataPane.show();
-					$(this).parent().find('.media_tab').removeClass('select');
-					metadataTab.addClass('select');
-					if (currentRelation != null) {
-						media.showAnnotation(null, currentRelation, mediaelement, true);
-					}
-				});
+				metadataTab.on('click', function() { media.showTab($(this), metadataPane) });
 				addMetadataTableForNodeToElement(node, metadataPane);
 				if (!foundAuxContent) {
 					element.find('.media_metadata').show();
-					metadataTab.addClass('select');
+					metadataTab.prop('checked', true);
 					foundAuxContent = true;
 				}
 			}
 
 			if ('undefined'==typeof(scalarMediaHideCitationsTab) || !scalarMediaHideCitationsTab) {
-				var detailsTab = $( '<div class="media_tab">Citations</div>' ).appendTo( mediaTabs );
+				var detailsTab = createTab('citations', 'Citations');
 				detailsTab.on('click',  function() {
-					media.options[ 'details' ].show( node );
+					media.options[ 'details' ].show( node, null, null, detailsTab );
 				} );
 			}
 
 			if ('undefined'==typeof(scalarMediaHideSourceFileTab) || !scalarMediaHideSourceFileTab) {
-				var sourceTab = $( '<div class="media_tab">Source file</div>' ).appendTo( mediaTabs );
+				var sourceTab = createTab('source', 'Source file');
 				sourceTab.on('click',  function() {
 					window.open( node.current.sourceFile, 'popout' );
 				} );
@@ -507,14 +557,15 @@
 			})
 
 			$('body').on('show_annotation', media.showAnnotation);
-
 			$('body').on('hide_annotation', media.hideAnnotation);
+
+			media.addNextRelatedMedia();
 
 			element.addClass('caption_font');
 			element.addClass('mediainfo');
-		  	$('.media_metadata').addClass('caption_font');
+			$('.media_metadata').addClass('caption_font');
 
-		  	$('body').trigger('scalarMediaReady', [mediaelement.view])
+			$('body').trigger('scalarMediaReady', [mediaelement.view])
 		}
 
 	}
