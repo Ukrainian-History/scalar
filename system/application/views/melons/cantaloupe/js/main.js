@@ -661,8 +661,6 @@ $(window).ready(function() {
 						$( 'body' ).append( '<div id="centered-message"><span>This page contains no content.</span> <span>Click the <img src="' + modules_uri + '/cantaloupe/images/edit_icon.png" alt="Edit button. Click to edit the current page or media." width="30" height="30" /> button above to add some.</span></div>' );
 					}
 				}
-			}
-		}
 
 			$('#book-title').parent().wrap('<nav role="navigation"></nav>');
 			$('article').before($('#book-title').parent().parent());
